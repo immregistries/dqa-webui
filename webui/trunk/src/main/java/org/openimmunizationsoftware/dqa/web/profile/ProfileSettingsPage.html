@@ -1,0 +1,60 @@
+<html
+	xmlns:wicket="http://wicket.apache.org/dtds.data/wicket-xhtml1.4-strict.dtd">
+<head>
+<title>DQA</title>
+<link rel="stylesheet" href="index.css" type="text/css" media="screen"
+	title="Stylesheet" />
+
+</head>
+<body>
+	<span wicket:id="navigationPanel"></span>
+	<div class="contents">
+		<h1>Profile Settings</h1>
+		<span wicket:id="msgs"></span>
+		<form wicket:id="form">
+			<table>
+				<tr>
+					<td>Profile Id</td>
+					<td><span wicket:id="profileId">1</span></td>
+				</tr>
+				<tr>
+					<td>Profile Code</td>
+					<td><span wicket:id="profileCode">Test123</span></td>
+				</tr>
+				<tr>
+					<td>Profile Label</td>
+					<td><input type="text" wicket:id="profileLabel" /></td>
+				</tr>
+				<tr>
+					<td>Profile Status</td>
+					<td><select wicket:id="profileStatus"></select></td>
+				</tr>
+				<tr>
+					<td>Organization</td>
+					<td><span wicket:id="organizationLabel">1</span></td>
+				</tr>
+				<tr>
+					<td>Data Format</td>
+					<td><select wicket:id="dataFormat"></select></td>
+				</tr>
+				<tr>
+					<td>Transfer Priority</td>
+					<td><select wicket:id="transferPriority"></select></td>
+				</tr>
+				<tr>
+					<td>Report Template</td>
+					<td></td>
+				</tr>
+				<tr>
+					<td colspan="2" align="right"><input type="submit"
+						value="save" class="fauxbutton" /></td>
+				</tr>
+			</table>
+		</form>
+
+		<ul>
+			<li><a href="">DQA Test Scripts</a></li>
+		</ul>
+	</div>
+</body>
+</html>
