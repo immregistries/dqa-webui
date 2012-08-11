@@ -473,7 +473,7 @@ public class ConfigServlet extends HttpServlet
           query.setInteger(1, application.getApplicationId());
           query.setString(2, configKeyedSetting.keyedCode);
           List<KeyedSetting> keyedSettingsList = query.list();
-          String value = "";
+          String value = configKeyedSetting.defaultValue;
           KeyedSetting keyedSetting = null;
           if (keyedSettingsList.size() > 0)
           {
@@ -577,6 +577,7 @@ public class ConfigServlet extends HttpServlet
     // private String configDescription = "";
     private boolean indent = false;
     private String[] validValues = null;
+    private String defaultValue = "";
 
     private ConfigKeyedSetting(String keyedCode, String configLabel, String configDescription) {
       this.keyedCode = keyedCode;
@@ -593,6 +594,12 @@ public class ConfigServlet extends HttpServlet
     public ConfigKeyedSetting setValidValues(String[] validValues)
     {
       this.validValues = validValues;
+      return this;
+    }
+
+    public ConfigKeyedSetting setDefaultValue(String defaultValue)
+    {
+      this.defaultValue = defaultValue;
       return this;
     }
   }
@@ -645,6 +652,12 @@ public class ConfigServlet extends HttpServlet
         .setValidValues(new String[] { "", "Y", "N" }).setIndent());
     configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.VALIDATE_VACCINATION_FACILITY_PFS, "Vaccination facility is PFS", "")
         .setValidValues(new String[] { "", "Y", "N" }).setIndent());
+
+    configKeyedSettingsList.add(new ConfigKeyedSetting(null, "DQA report", ""));
+    configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.DQA_REPORT_READY_FOR_PRODUCTION_ENABLED, "Ready for Production flag enabled", "")
+        .setValidValues(new String[] { "", "Y", "N" }).setIndent().setDefaultValue("Y"));
+    configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.DQA_REPORT_READY_FOR_PRODUCTION_TRIGGER_LEVEL,
+        "Ready for Production trigger level", "").setIndent().setDefaultValue("50"));
 
     configKeyedSettingsList.add(new ConfigKeyedSetting(null, "Weekly batch", ""));
     configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.WEEKLY_BATCH_DAY, "Batch day (1=Sunday)", "").setValidValues(
