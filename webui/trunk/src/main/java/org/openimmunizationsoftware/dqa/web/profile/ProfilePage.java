@@ -1,5 +1,6 @@
 package org.openimmunizationsoftware.dqa.web.profile;
 
+import org.apache.wicket.RestartResponseException;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
 import org.openimmunizationsoftware.dqa.db.model.SubmitterProfile;
@@ -21,6 +22,10 @@ public class ProfilePage extends DqaBasePage implements SecurePage
     DqaSession webSession = (DqaSession) getSession();
 
     SubmitterProfile profile = webSession.getSubmitterProfile();
+    if (profile == null)
+    {
+      throw new RestartResponseException(new ProfileSelectPage());
+    }
     
     add(new Label("profileId", ""+ profile.getProfileId()));
     add(new Label("profileCode", profile.getProfileCode()));

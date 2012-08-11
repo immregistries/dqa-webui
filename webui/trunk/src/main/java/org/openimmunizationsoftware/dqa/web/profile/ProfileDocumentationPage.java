@@ -5,7 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.basic.Label;
+import org.apache.wicket.markup.html.link.BookmarkablePageLink;
 import org.apache.wicket.markup.html.list.ListItem;
 import org.apache.wicket.markup.html.list.ListView;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
@@ -24,6 +26,10 @@ import org.openimmunizationsoftware.dqa.web.SecurePage;
 public class ProfileDocumentationPage extends DqaBasePage implements SecurePage
 {
 
+  private static final long serialVersionUID = 1L;
+  
+  private boolean errorsOnly = false;
+
   public ProfileDocumentationPage() {
     this(new PageParameters());
   }
@@ -31,11 +37,26 @@ public class ProfileDocumentationPage extends DqaBasePage implements SecurePage
   public ProfileDocumentationPage(final PageParameters parameters) {
     super(parameters, NavigationPanel.PROFILE);
 
+    errorsOnly = parameters.get("errorsOnly").toBoolean(false);
+    
+
+    
     final DqaSession webSession = (DqaSession) getSession();
     final Session dataSession = webSession.getDataSession();
     final SubmitterProfile profile = webSession.getSubmitterProfile();
-
     final PotentialIssues potentialIssues = PotentialIssues.getPotentialIssues();
+    
+    WebMarkupContainer allExplanation = new WebMarkupContainer("allExplanation");
+    add(allExplanation);
+    allExplanation.setVisible(!errorsOnly);
+    PageParameters pars = new PageParameters();
+    pars.add("errorsOnly", true);
+    allExplanation.add(new BookmarkablePageLink<Void>("showOnlyErrorsLink", ProfileDocumentationPage.class, pars));
+    
+    WebMarkupContainer errorsOnlyExplanation = new WebMarkupContainer("errorsOnlyExplanation");
+    add(errorsOnlyExplanation);
+    errorsOnlyExplanation.setVisible(errorsOnly);
+    errorsOnlyExplanation.add(new BookmarkablePageLink<Void>("showAllLink", ProfileDocumentationPage.class));
 
     List<Field> fieldList = potentialIssues.getAllFields();
     Collections.sort(fieldList);
@@ -48,13 +69,14 @@ public class ProfileDocumentationPage extends DqaBasePage implements SecurePage
     {
       potentialIssueStatusMap.put(potentialIssueStatus.getIssue(), potentialIssueStatus);
     }
-    
+
     ListView<Field> documentationItems = new ListView<Field>("documentationItems", fieldList) {
       @Override
       protected void populateItem(ListItem<Field> item)
       {
         Field field = item.getModelObject();
-        item.add(new Label("documentationItemText", potentialIssues.getDocumentation(field, potentialIssueStatusMap)).setEscapeModelStrings(false));
+        item.add(new Label("documentationItemText", potentialIssues.getDocumentation(field, potentialIssueStatusMap, errorsOnly))
+            .setEscapeModelStrings(false));
       }
     };
     add(documentationItems);

@@ -547,7 +547,7 @@ public class FileImportProcessorCore
         out.println("Message Data: ");
         printBean(out, messageReceived, "  ");
       }
-      out.println("Current processing speed: " + ((float) thread.getProgressCount())
+      out.format("Current processing speed: %.2f messages/second ", ((float) thread.getProgressCount())
           / ((System.currentTimeMillis() - thread.getProgressStart()) / 1000.0));
 
       out.println();

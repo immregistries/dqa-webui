@@ -5,7 +5,7 @@ import org.mortbay.jetty.Server;
 import org.mortbay.jetty.bio.SocketConnector;
 import org.mortbay.jetty.webapp.WebAppContext;
 
-public class Start {
+public class StartDQAWebUI {
   
   public static final int PORT = 8281;
 

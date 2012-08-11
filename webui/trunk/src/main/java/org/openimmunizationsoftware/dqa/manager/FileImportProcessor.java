@@ -618,7 +618,7 @@ public class FileImportProcessor extends ManagerThread
         out.println("Message Data: ");
         printBean(out, messageReceived, "  ");
       }
-      out.println("Current processing speed: " + ((float) progressCount) / ((System.currentTimeMillis() - progressStart) / 1000.0));
+      out.format("Current processing speed: %.2f messages/second", ((float) progressCount) / ((System.currentTimeMillis() - progressStart) / 1000.0));
 
       out.println();
       out.println();
