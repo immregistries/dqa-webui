@@ -22,7 +22,7 @@ public class TestVaccineProduct extends TestCase
     Query query = session.createQuery("from VaccineProduct");
     List<VaccineProduct> vaccineProducts = query.list();
     session.close();
-    assertEquals(81, vaccineProducts.size());
+    assertEquals(85, vaccineProducts.size());
   }
   
   public void testVaccineCpt()
@@ -33,7 +33,7 @@ public class TestVaccineProduct extends TestCase
     Query query = session.createQuery("from VaccineCpt");
     List<VaccineCpt> vaccineCpts = query.list();
     session.clear();
-    assertEquals(98, vaccineCpts.size());
+    assertEquals(99, vaccineCpts.size());
     
   }
 }
