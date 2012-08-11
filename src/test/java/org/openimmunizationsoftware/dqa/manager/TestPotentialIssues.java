@@ -145,6 +145,7 @@ public class TestPotentialIssues extends TestCase
     assertNotNull(pi.NextOfKinRelationshipIsInvalid);
     assertNotNull(pi.NextOfKinRelationshipIsMissing);
     assertNotNull(pi.NextOfKinRelationshipIsNotResponsibleParty);
+    assertNotNull(pi.NextOfKinRelationshipIsUnexpected);
     assertNotNull(pi.NextOfKinRelationshipIsUnrecognized);
     assertNotNull(pi.NextOfKinSsnIsMissing);
     assertNotNull(pi.ObservationValueTypeIsDeprecated);

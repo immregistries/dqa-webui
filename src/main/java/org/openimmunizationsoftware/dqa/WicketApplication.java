@@ -13,7 +13,7 @@ import org.openimmunizationsoftware.dqa.web.LoginPage;
  * Application object for your web application. If you want to run this
  * application without deploying, run the Start class.
  * 
- * @see org.openimmunizationsoftware.dqa.Start#main(String[])
+ * @see org.openimmunizationsoftware.dqa.StartDQAWebUI#main(String[])
  */
 public class WicketApplication extends WebApplication
 {
