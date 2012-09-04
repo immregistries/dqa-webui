@@ -1,0 +1,46 @@
+<project name="dqa" default="db" basedir="." xmlns:artifact="antlib:org.apache.maven.artifact.ant">
+	<property name="source.root" value="src/main/java"/>
+	<property name="class.root" value="classes"/>
+	<property name="data.dir" value="data"/>
+	
+	<artifact:dependencies pathId="dependency.classpath">
+		<dependency groupId="hsqldb" artifactId="hsqldb" version="1.8.0.7"/>
+		<dependency groupId="org.hibernate" artifactId="hibernate" version="3.2.5.ga">
+			<exclusion groupId="javax.transaction" artifactId="jta"/>
+		</dependency>
+		<dependency groupId="org.hibernate" artifactId="hibernate-tools" version="3.2.0.beta9a"/>
+		<dependency groupId="org.apache.geronimo.specs" artifactId="geronimo-jta_1.1_spec" version="1.1"/>
+		<dependency groupId="log4j" artifactId="log4j" version="1.2.14"/>
+	</artifact:dependencies>
+	
+	<path id="project.class.path">
+		<pathelement location="${class.root}" />
+		<path refid="dependency.classpath"/>
+	</path>
+	
+	<taskdef name="hibernatetool" classname="org.hibernate.tool.ant.HibernateToolTask" classpathref="project.class.path"/>
+	
+	<target name="db" description="Runs HSQLDB database management UI against database file">
+		<java classname="org.hsqldb.util.DatabaseManager" fork="yes">
+			<classpath refid="project.class.path"/>
+			<arg value="-driver"/>
+			<arg value="org.hsqldb.jdbcDriver"/>
+			<arg value="-url"/>
+			<arg value="jdbc:hsqldb:${data.dir}/dqa"/>
+			<arg value="-user"/>
+			<arg value="sa"/>
+		</java>
+	</target>
+	
+	<target name="codegen" description="">
+		<hibernatetool destdir="${source.root}">
+			<configuration>
+				<fileset dir="${source.root}">
+					  <include name="**/*.hbm.xml"/>
+				</fileset>
+			</configuration>
+			<hbm2java/>
+		</hibernatetool>
+	</target>
+	
+</project>
