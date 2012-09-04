@@ -3,7 +3,7 @@
   <groupId>org.openimmunizationsoftware.dqa</groupId>
   <artifactId>ois-dqa-wicket</artifactId>
   <packaging>war</packaging>
-  <version>1.3-SNAPSHOT</version>
+  <version>1.4-SNAPSHOT</version>
   <name>DQA</name>
   <description></description>
   <organization>
