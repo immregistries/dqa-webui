@@ -336,9 +336,11 @@ public class TestPotentialIssues extends TestCase
     assertNotNull(pi.VaccinationAdminCodeIsDeprecated);
     assertNotNull(pi.VaccinationAdminCodeIsIgnored);
     assertNotNull(pi.VaccinationAdminCodeIsInvalid);
+    assertNotNull(pi.VaccinationAdminCodeIsInvalidForDateAdministered);
     assertNotNull(pi.VaccinationAdminCodeIsMissing);
     assertNotNull(pi.VaccinationAdminCodeIsNotSpecific);
     assertNotNull(pi.VaccinationAdminCodeIsNotVaccine);
+    assertNotNull(pi.VaccinationAdminCodeIsUnexpectedForDateAdministered);
     assertNotNull(pi.VaccinationAdminCodeIsUnrecognized);
     assertNotNull(pi.VaccinationAdminCodeIsValuedAsNotAdministered);
     assertNotNull(pi.VaccinationAdminCodeIsValuedAsUnknown);
@@ -401,12 +403,16 @@ public class TestPotentialIssues extends TestCase
     assertNotNull(pi.VaccinationCptCodeIsDeprecated);
     assertNotNull(pi.VaccinationCptCodeIsIgnored);
     assertNotNull(pi.VaccinationCptCodeIsInvalid);
+    assertNotNull(pi.VaccinationCptCodeIsInvalidForDateAdministered);
     assertNotNull(pi.VaccinationCptCodeIsMissing);
+    assertNotNull(pi.VaccinationCptCodeIsUnexpectedForDateAdministered);
     assertNotNull(pi.VaccinationCptCodeIsUnrecognized);
     assertNotNull(pi.VaccinationCvxCodeIsDeprecated);
     assertNotNull(pi.VaccinationCvxCodeIsIgnored);
     assertNotNull(pi.VaccinationCvxCodeIsInvalid);
+    assertNotNull(pi.VaccinationCvxCodeIsInvalidForDateAdministered);
     assertNotNull(pi.VaccinationCvxCodeIsMissing);
+    assertNotNull(pi.VaccinationCvxCodeIsUnexpectedForDateAdministered);
     assertNotNull(pi.VaccinationCvxCodeIsUnrecognized);
     assertNotNull(pi.VaccinationCvxCodeAndCptCodeAreInconsistent);
     assertNotNull(pi.VaccinationFacilityIdIsDeprecated);
@@ -451,7 +457,9 @@ public class TestPotentialIssues extends TestCase
     assertNotNull(pi.VaccinationManufacturerCodeIsDeprecated);
     assertNotNull(pi.VaccinationManufacturerCodeIsIgnored);
     assertNotNull(pi.VaccinationManufacturerCodeIsInvalid);
+    assertNotNull(pi.VaccinationManufacturerCodeIsInvalidForDateAdministered);
     assertNotNull(pi.VaccinationManufacturerCodeIsMissing);
+    assertNotNull(pi.VaccinationManufacturerCodeIsUnexpectedForDateAdministered);
     assertNotNull(pi.VaccinationManufacturerCodeIsUnrecognized);
     assertNotNull(pi.VaccinationOrderControlCodeIsDeprecated);
     assertNotNull(pi.VaccinationOrderControlCodeIsIgnored);
@@ -476,7 +484,9 @@ public class TestPotentialIssues extends TestCase
     assertNotNull(pi.VaccinationPlacerOrderNumberIsUnrecognized);
     assertNotNull(pi.VaccinationProductIsDeprecated);
     assertNotNull(pi.VaccinationProductIsInvalid);
+    assertNotNull(pi.VaccinationProductIsInvalidForDateAdministered);
     assertNotNull(pi.VaccinationProductIsMissing);
+    assertNotNull(pi.VaccinationProductIsUnexpectedForDateAdministered);
     assertNotNull(pi.VaccinationProductIsUnrecognized);
     assertNotNull(pi.VaccinationRecordedByIsDeprecated);
     assertNotNull(pi.VaccinationRecordedByIsIgnored);
@@ -492,5 +502,6 @@ public class TestPotentialIssues extends TestCase
     assertNotNull(pi.VaccinationSystemEntryTimeIsInFuture);
     assertNotNull(pi.VaccinationSystemEntryTimeIsInvalid);
     assertNotNull(pi.VaccinationSystemEntryTimeIsMissing);
+
   }
 }
