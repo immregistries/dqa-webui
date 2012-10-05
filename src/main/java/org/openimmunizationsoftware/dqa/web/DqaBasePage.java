@@ -15,6 +15,7 @@ public class DqaBasePage extends WebPage
 
   public DqaBasePage(final PageParameters parameters, NavigationPanel.MenuLink menuLinkSelected) {
     add(new NavigationPanel("navigationPanel", menuLinkSelected));
+    add(new VersionPanel("versionPanel"));
   }
   
   protected DqaSession getWebSession()
