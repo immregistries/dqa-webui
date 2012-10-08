@@ -409,8 +409,11 @@ public class ConfigServlet extends HttpServlet
         lastPotentialIssueStatus = potentialIssueStatus;
       }
       out.println("    </table>");
+      out.println("    <br/>");
       out.println("          <input type=\"submit\" name=\"action\" value=\"update template profile\"/></td>");
       out.println("    </form>");
+      out.println("    <p><a href=\"reportTemplate?templateId="+ reportTemplate.getTemplateId() + "&action=showXML\">Report Template XML</a>");
+      out.println("    </p>");
 
     } else if (menu.equals(MENU_TEST))
     {
