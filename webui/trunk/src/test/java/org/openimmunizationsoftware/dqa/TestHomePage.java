@@ -28,8 +28,6 @@ public class TestHomePage extends TestCase
 		//assert rendered page class
 		tester.assertRenderedPage(HomePage.class);
 
-		//assert rendered label component
-		tester.assertLabel("messageField", "Hello, primary organization = IIS");
 	}
 	
 	
