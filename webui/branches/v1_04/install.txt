@@ -1,0 +1,16 @@
+Steps for install
+
+1. Copying files over using box.net
+   + initial_data.sql
+   + data.sql
+   + initial.sql
+
+2. Run initial.sql in oracle database
+
+3. Run inital-data.sql
+
+4. Install Java, Tomcat, check to see if Tomcat is talking to you
+
+5. Past war file into tomcat directory
+
+6
