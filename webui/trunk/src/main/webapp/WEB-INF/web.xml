@@ -22,6 +22,11 @@
 		<servlet-class>org.openimmunizationsoftware.dqa.IncomingServlet</servlet-class>
 		<load-on-startup>1</load-on-startup>
 	</servlet>
+  <servlet>
+    <servlet-name>RemoteConnectionReportingServlet</servlet-name>
+    <servlet-class>org.openimmunizationsoftware.dqa.web.servlet.RemoteConnectionReportingServlet</servlet-class>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
 	<servlet>
 		<servlet-name>ConfigServlet</servlet-name>
 		<servlet-class>org.openimmunizationsoftware.dqa.ConfigServlet</servlet-class>
@@ -78,6 +83,10 @@
 		<servlet-name>InServlet</servlet-name>
 		<url-pattern>/in</url-pattern>
 	</servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>RemoteConnectionReportingServlet</servlet-name>
+    <url-pattern>/remote</url-pattern>
+  </servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>ConfigServlet</servlet-name>
 		<url-pattern>/config</url-pattern>
