@@ -13,7 +13,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.wicket.request.UrlEncoder;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -26,8 +25,14 @@ import org.openimmunizationsoftware.dqa.manager.OrganizationManager;
 
 public class RemoteConnectionReportingServlet extends HttpServlet implements RemoteConnectionReportingInterface
 {
+ 
 
-  public static final long INACTIVE_TIMEOUT_WINDOW = 5 * 60 * 1000;
+  /**
+   * 
+   */
+  private static final long serialVersionUID = 1L;
+  
+  public static final long INACTIVE_TIMEOUT_WINDOW = 16 * 60 * 1000;
 
   @Override
   protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
@@ -58,6 +63,19 @@ public class RemoteConnectionReportingServlet extends HttpServlet implements Rem
       }
     } finally
     {
+      // This was added to solve an emergency problem where a client was
+      // inadvertantly running a DOS attack and running
+      // out bandwith.
+      // synchronized (out)
+      // {
+      // try
+      // {
+      // out.wait(60 * 60 * 1000);
+      // } catch (InterruptedException ie)
+      // {
+      // // ignore
+      // }
+      // }
       out.close();
     }
 
