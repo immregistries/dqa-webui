@@ -7,7 +7,7 @@ import org.mortbay.jetty.webapp.WebAppContext;
 
 public class StartDQAWebUI {
   
-  public static final int PORT = 8281;
+  public static final int PORT = 5432;
 
 	public static void main(String[] args) throws Exception {
 		Server server = new Server();
