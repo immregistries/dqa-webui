@@ -126,6 +126,13 @@
 		<version>10.2.0</version>
 	</dependency>
 -->
+<!-- ADDED for POSTGRESQL -->
+<dependency>
+    <groupId>postgresql</groupId>
+    <artifactId>postgresql</artifactId>
+    <version>9.1-901.jdbc4</version>
+</dependency>
+
   <dependency>
       <groupId>mysql</groupId>
       <artifactId>mysql-connector-java</artifactId>
