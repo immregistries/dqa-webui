@@ -40,7 +40,7 @@ import org.openimmunizationsoftware.dqa.db.model.ReceiveQueue;
 import org.openimmunizationsoftware.dqa.db.model.ReportTemplate;
 import org.openimmunizationsoftware.dqa.db.model.SubmitStatus;
 import org.openimmunizationsoftware.dqa.db.model.SubmitterProfile;
-import org.openimmunizationsoftware.dqa.parse.VaccinationUpdateParserHL7;
+import org.openimmunizationsoftware.dqa.parse.VaccinationParserHL7;
 import org.openimmunizationsoftware.dqa.quality.QualityCollector;
 import org.openimmunizationsoftware.dqa.quality.QualityReport;
 import org.openimmunizationsoftware.dqa.validate.Validator;
@@ -58,7 +58,7 @@ public class FileImportProcessor extends ManagerThread
   private File receiveDir = null;
   private File submitDir = null;
   private SubmitterProfile profile = null;
-  private VaccinationUpdateParserHL7 parser = null;
+  private VaccinationParserHL7 parser = null;
   private PrintWriter ackOut;
   private PrintWriter logOut;
   private PrintWriter reportOut;
@@ -206,7 +206,7 @@ public class FileImportProcessor extends ManagerThread
       procLog("Using profile " + profile.getProfileId() + " '" + profile.getProfileLabel() + "' for organization '"
           + profile.getOrganization().getOrgLabel() + "'");
     }
-    parser = new VaccinationUpdateParserHL7(profile);
+    parser = new VaccinationParserHL7(profile);
   }
 
   private void lookToProcessFile(Session session, String filename) throws FileNotFoundException, IOException

@@ -31,7 +31,7 @@ import org.openimmunizationsoftware.dqa.manager.FileImportProcessorCore;
 import org.openimmunizationsoftware.dqa.manager.KeyedSettingManager;
 import org.openimmunizationsoftware.dqa.manager.ManagerThread;
 import org.openimmunizationsoftware.dqa.manager.OrganizationManager;
-import org.openimmunizationsoftware.dqa.parse.VaccinationUpdateParserHL7;
+import org.openimmunizationsoftware.dqa.parse.VaccinationParserHL7;
 
 public class UploadDataServlet extends HttpServlet
 {
@@ -231,7 +231,7 @@ public class UploadDataServlet extends HttpServlet
       SubmitterProfile profile = findProfile(profileCode, templateId, session);
       if (profile.isProfileStatusTest())
       {
-        VaccinationUpdateParserHL7 parser = new VaccinationUpdateParserHL7(profile);
+        VaccinationParserHL7 parser = new VaccinationParserHL7(profile);
         Transaction tx = session.beginTransaction();
         profile.initPotentialIssueStatus(session);
         tx.commit();
