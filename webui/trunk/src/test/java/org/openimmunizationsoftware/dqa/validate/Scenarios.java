@@ -1,4 +1,4 @@
-package org.openimmunizationsoftware.dqa.immtrac;
+package org.openimmunizationsoftware.dqa.validate;
 
 import junit.framework.TestCase;
 
