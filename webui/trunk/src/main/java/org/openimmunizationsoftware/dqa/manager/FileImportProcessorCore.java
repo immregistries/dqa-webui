@@ -32,7 +32,7 @@ import org.openimmunizationsoftware.dqa.db.model.MessageReceived;
 import org.openimmunizationsoftware.dqa.db.model.ReceiveQueue;
 import org.openimmunizationsoftware.dqa.db.model.SubmitStatus;
 import org.openimmunizationsoftware.dqa.db.model.SubmitterProfile;
-import org.openimmunizationsoftware.dqa.parse.VaccinationUpdateParserHL7;
+import org.openimmunizationsoftware.dqa.parse.VaccinationParserHL7;
 import org.openimmunizationsoftware.dqa.quality.QualityCollector;
 import org.openimmunizationsoftware.dqa.quality.QualityReport;
 import org.openimmunizationsoftware.dqa.validate.Validator;
@@ -54,7 +54,7 @@ public class FileImportProcessorCore
   private PrintWriter errorsOut;
   private PrintWriter acceptedOut;
   private SubmitterProfile profile = null;
-  private VaccinationUpdateParserHL7 parser = null;
+  private VaccinationParserHL7 parser = null;
   private File acceptedDir = null;
   private File receiveDir = null;
 
@@ -168,12 +168,12 @@ public class FileImportProcessorCore
     this.profile = profile;
   }
 
-  public VaccinationUpdateParserHL7 getParser()
+  public VaccinationParserHL7 getParser()
   {
     return parser;
   }
 
-  public void setParser(VaccinationUpdateParserHL7 parser)
+  public void setParser(VaccinationParserHL7 parser)
   {
     this.parser = parser;
   }
@@ -198,7 +198,7 @@ public class FileImportProcessorCore
     this.receiveDir = receiveDir;
   }
 
-  public FileImportProcessorCore(PrintWriter processingOut, ManagerThread thread, SubmitterProfile profile, VaccinationUpdateParserHL7 parser,
+  public FileImportProcessorCore(PrintWriter processingOut, ManagerThread thread, SubmitterProfile profile, VaccinationParserHL7 parser,
       File acceptedDir, File receiveDir) {
     this.processingOut = processingOut;
     this.thread = thread;
@@ -301,6 +301,7 @@ public class FileImportProcessorCore
     } catch (Throwable exception)
     {
       procLog(" + EXCEPTION: " + exception.getMessage());
+      exception.printStackTrace();
       tx.rollback();
       String ackMessage = "MSH|^~\\&|||||201105231008000||ACK^|201105231008000|P|2.3.1|\r" + "MSA|AE|TODO|Exception occurred: "
           + exception.getMessage() + "|\r";

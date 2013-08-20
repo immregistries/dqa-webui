@@ -20,26 +20,25 @@ import org.openimmunizationsoftware.dqa.db.model.BatchReport;
 import org.openimmunizationsoftware.dqa.db.model.BatchType;
 import org.openimmunizationsoftware.dqa.db.model.CodeReceived;
 import org.openimmunizationsoftware.dqa.db.model.CodeTable;
-import org.openimmunizationsoftware.dqa.db.model.IssueAction;
 import org.openimmunizationsoftware.dqa.db.model.IssueFound;
 import org.openimmunizationsoftware.dqa.db.model.MessageBatch;
 import org.openimmunizationsoftware.dqa.db.model.MessageReceived;
+import org.openimmunizationsoftware.dqa.db.model.MessageReceivedGeneric;
 import org.openimmunizationsoftware.dqa.db.model.Organization;
 import org.openimmunizationsoftware.dqa.db.model.ReportTemplate;
 import org.openimmunizationsoftware.dqa.db.model.SubmitterProfile;
 import org.openimmunizationsoftware.dqa.db.model.UserAccount;
 import org.openimmunizationsoftware.dqa.manager.CodesReceived;
 import org.openimmunizationsoftware.dqa.manager.FileImportManager;
-import org.openimmunizationsoftware.dqa.manager.MessageReceivedManager;
 import org.openimmunizationsoftware.dqa.manager.OrganizationManager;
 import org.openimmunizationsoftware.dqa.manager.WeeklyBatchManager;
 import org.openimmunizationsoftware.dqa.manager.WeeklyExportManager;
 import org.openimmunizationsoftware.dqa.parse.PrintBean;
-import org.openimmunizationsoftware.dqa.parse.VaccinationUpdateParserHL7;
+import org.openimmunizationsoftware.dqa.parse.VaccinationParserHL7;
+import org.openimmunizationsoftware.dqa.process.MessageProcessRequest;
+import org.openimmunizationsoftware.dqa.process.MessageProcessResponse;
 import org.openimmunizationsoftware.dqa.process.MessageProcessor;
-import org.openimmunizationsoftware.dqa.process.MessageProcessorException;
 import org.openimmunizationsoftware.dqa.quality.QualityCollector;
-import org.openimmunizationsoftware.dqa.validate.Validator;
 
 public class IncomingServlet extends HttpServlet
 {
@@ -248,11 +247,12 @@ public class IncomingServlet extends HttpServlet
         ProcessLocker.lock(profile);
         qualityCollector = new QualityCollector("Realtime HTTPS", BatchType.SUBMISSION, profile);
         String messageData = req.getParameter("MESSAGEDATA");
-//        Results results = new Results();
-//        results.setDebug(debug);
-//        processStream(debug, session, profile, messageData, out, qualityCollector, results);
+        // Results results = new Results();
+        // results.setDebug(debug);
+        // processStream(debug, session, profile, messageData, out,
+        // qualityCollector, results);
         debug = processStream(debug, session, profile, messageData, out, qualityCollector);
-//        debug = results.isDebug();
+        // debug = results.isDebug();
       } finally
       {
         ProcessLocker.unlock(profile);
@@ -263,7 +263,7 @@ public class IncomingServlet extends HttpServlet
     }
     if (debug)
     {
-      printDebugOutput(out, session, profile, qualityCollector);
+      // printDebugOutput(out, session, profile, qualityCollector);
     }
     out.close();
     out = null;
@@ -353,130 +353,97 @@ public class IncomingServlet extends HttpServlet
     out.print(" + Not Administered: " + r.getVaccinationNotAdministeredCount() + "\r");
     out.print(" + Deleted:          " + r.getVaccinationDeleteCount() + "\r");
   }
-/*
-  public static class Results
-  {
-    private boolean debug = false;
-    private String responseStatus = "";
-    private String responseText = "";
-    private int batchId = 0;
-    private int receivedId = 0;
 
-    private List<IssueType> errorList = null;
-    private List<IssueType> warningList = null;
-
-    public List<IssueType> getErrorList()
-    {
-      return errorList;
-    }
-
-    public void setErrorList(List<IssueType> errorList)
-    {
-      this.errorList = errorList;
-    }
-
-    public List<IssueType> getWarningList()
-    {
-      return warningList;
-    }
-
-    public void setWarningList(List<IssueType> warningList)
-    {
-      this.warningList = warningList;
-    }
-
-    public boolean isDebug()
-    {
-      return debug;
-    }
-
-    public void setDebug(boolean debug)
-    {
-      this.debug = debug;
-    }
-
-    public String getResponseStatus()
-    {
-      return responseStatus;
-    }
-
-    public void setResponseStatus(String responseStatus)
-    {
-      this.responseStatus = responseStatus;
-    }
-
-    public String getResponseText()
-    {
-      return responseText;
-    }
-
-    public void setResponseText(String responseText)
-    {
-      this.responseText = responseText;
-    }
-
-    public int getBatchId()
-    {
-      return batchId;
-    }
-
-    public void setBatchId(int batchId)
-    {
-      this.batchId = batchId;
-    }
-
-    public int getReceivedId()
-    {
-      return receivedId;
-    }
-
-    public void setReceivedId(int receivedId)
-    {
-      this.receivedId = receivedId;
-    }
-  }
-*/
-//  public static void processStream(boolean debug, Session session, SubmitterProfile profile, String messageData, PrintWriter out,
-//	      QualityCollector qualityCollector, Results results) throws IOException
+  /*
+   * public static class Results { private boolean debug = false; private String
+   * responseStatus = ""; private String responseText = ""; private int batchId
+   * = 0; private int receivedId = 0;
+   * 
+   * private List<IssueType> errorList = null; private List<IssueType>
+   * warningList = null;
+   * 
+   * public List<IssueType> getErrorList() { return errorList; }
+   * 
+   * public void setErrorList(List<IssueType> errorList) { this.errorList =
+   * errorList; }
+   * 
+   * public List<IssueType> getWarningList() { return warningList; }
+   * 
+   * public void setWarningList(List<IssueType> warningList) { this.warningList
+   * = warningList; }
+   * 
+   * public boolean isDebug() { return debug; }
+   * 
+   * public void setDebug(boolean debug) { this.debug = debug; }
+   * 
+   * public String getResponseStatus() { return responseStatus; }
+   * 
+   * public void setResponseStatus(String responseStatus) { this.responseStatus
+   * = responseStatus; }
+   * 
+   * public String getResponseText() { return responseText; }
+   * 
+   * public void setResponseText(String responseText) { this.responseText =
+   * responseText; }
+   * 
+   * public int getBatchId() { return batchId; }
+   * 
+   * public void setBatchId(int batchId) { this.batchId = batchId; }
+   * 
+   * public int getReceivedId() { return receivedId; }
+   * 
+   * public void setReceivedId(int receivedId) { this.receivedId = receivedId; }
+   * }
+   */
+  // public static void processStream(boolean debug, Session session,
+  // SubmitterProfile profile, String messageData, PrintWriter out,
+  // QualityCollector qualityCollector, Results results) throws IOException
   public boolean processStream(boolean debug, Session session, SubmitterProfile profile, String messageData, PrintWriter out,
       QualityCollector qualityCollector) throws IOException
   {
-    VaccinationUpdateParserHL7 parser = new VaccinationUpdateParserHL7(profile);
+    VaccinationParserHL7 parser = new VaccinationParserHL7(profile);
     boolean debugOn = debug;
 
     StringReader stringReader = new StringReader(messageData);
     BufferedReader in = new BufferedReader(stringReader);
     String line = null;
     StringBuilder sb = new StringBuilder();
-    MessageReceived msg = null;
-    
+    MessageReceivedGeneric msg = null;
+
     while ((line = in.readLine()) != null)
     {
       if (line.startsWith("MSH"))
       {
         if (sb.length() > 0)
         {
-//          processMessage(parser, sb, profile, session, out, qualityCollector, results, false);
-		      msg = MessageProcessor.processMessage(debug, parser, sb.toString(), profile, session, qualityCollector);
-		    if (msg.isSuccessful())
-		    {  
-		      printMessage(msg, qualityCollector, out);
-	          debugOn = msg.isDebugOn();
+          MessageProcessRequest request = new MessageProcessRequest(sb.toString());
+          request.setDebugFlag(debug);
+          request.setParser(parser);
+          request.setProfile(profile);
+          request.setSession(session);
+          request.setQualityCollector(qualityCollector);
+          MessageProcessResponse response = MessageProcessor.processMessage(request);
+          msg = response.getMessageReceived();
+          if (msg.isSuccessfulCompletion())
+          {
+            printMessage(msg, qualityCollector, out, request);
+            debugOn = request.isDebugOn();
 
-        	} else {
-		      if (out != null)
-		      {
-		        out.print(msg.getResponseText());
-		      } else
-		      {
-		        msg.getException().printStackTrace();
-		      }
-		      if (msg.isDebugOn())
-		      {
-		        msg.getException().printStackTrace(out);
-		      }
-		      msg.getException().printStackTrace();
-			}
+          } else
+          {
+            if (out != null)
+            {
+              out.print(msg.getResponseText());
+            } else
+            {
+              msg.getException().printStackTrace();
+            }
+            if (request.isDebugOn())
+            {
+              msg.getException().printStackTrace(out);
+            }
+            msg.getException().printStackTrace();
+          }
 
         }
         sb.setLength(0);
@@ -489,27 +456,38 @@ public class IncomingServlet extends HttpServlet
     }
     if (sb.length() > 0)
     {
-	  msg = MessageProcessor.processMessage(debug, parser, sb.toString(), profile, session, qualityCollector);
-      if (msg.isSuccessful())
-      {  
-          printMessage(msg, qualityCollector, out);
-          debugOn = msg.isDebugOn();
+      MessageProcessRequest request = new MessageProcessRequest(sb.toString());
+      request.setDebugFlag(debug);
+      request.setParser(parser);
+      request.setProfile(profile);
+      request.setSession(session);
+      request.setQualityCollector(qualityCollector);
+      MessageProcessResponse response = MessageProcessor.processMessage(request);
+      msg = response.getMessageReceived();
+      if (msg.isSuccessfulCompletion())
+      {
+        printMessage(msg, qualityCollector, out, request);
+        debugOn = request.isDebugOn();
 
-	  } else {
-		  if (out != null)
-		  {
-		    out.print(msg.getResponseText());
-		  } else
-		  {
-		    msg.getException().printStackTrace();
-		  }
-		  if (msg.isDebugOn())
-		  {
-		    msg.getException().printStackTrace(out);
-		  }
-		  msg.getException().printStackTrace();
-	  }
-	  debug = msg.isDebugOn();
+      } else
+      {
+        if (out != null)
+        {
+          out.print(msg.getResponseText());
+        } else
+        {
+          msg.getException().printStackTrace();
+        }
+        if (request.isDebugOn())
+        {
+          msg.getException().printStackTrace(out);
+        }
+        if (msg.getException() != null)
+        {
+          msg.getException().printStackTrace();
+        }
+      }
+      debug = request.isDebugOn();
     }
     Transaction tx = session.beginTransaction();
     qualityCollector.close();
@@ -520,86 +498,82 @@ public class IncomingServlet extends HttpServlet
     return debugOn;
   }
 
-  private void printMessage(MessageReceived msg, QualityCollector qualityCollector, PrintWriter out)
+  private void printMessage(MessageReceivedGeneric msg, QualityCollector qualityCollector, PrintWriter out, MessageProcessRequest request)
   {
-  
-      out.print(msg.getResponseText());
-      if (msg.isDebugOn())
-      {
-        try
-        {
-          out.print("-- DEBUG START -------------------------------------------------------\r");
-          out.print("Processed message: " + qualityCollector.getMessageBatch().getBatchReport().getMessageCount() + "\r");
-          List<IssueFound> issuesFound = msg.getIssuesFound();
-          boolean first = true;
-          for (IssueFound issueFound : issuesFound)
-          {
-            if (issueFound.isError())
-            {
-              if (first)
-              {
-                out.print("Errors:\r");
-                first = false;
-              }
-              printIssueFound(issueFound, out);
-            }
-          }
-          first = true;
-          for (IssueFound issueFound : issuesFound)
-          {
-            if (issueFound.isWarn())
-            {
-              if (first)
-              {
-                out.print("Warnings:\r");
-                first = false;
-              }
-              printIssueFound(issueFound, out);
-            }
-          }
-          first = true;
-          for (IssueFound issueFound : issuesFound)
-          {
-            if (issueFound.isSkip())
-            {
-              if (first)
-              {
-                out.print("Skip:\r");
-                first = false;
-              }
-              printIssueFound(issueFound, out);
-            }
-          }
-          out.print("Message Data: \r");
-          PrintBean.print(msg, out);
-          out.print("-- DEBUG END ---------------------------------------------------------\r");
-        } catch (Exception e)
-        {
-          e.printStackTrace(out);
-        }
-      }
-  }
-/*
-  private static void populateResults(Results results, MessageReceived messageReceived)
-  {
-    results.setReceivedId((int) messageReceived.getReceivedId());
-    results.setResponseStatus(messageReceived.getIssueAction().getActionCode());
-    results.setResponseText(messageReceived.getResponseText());
-    if (results.getErrorList() != null && results.getWarningList() != null)
+
+    out.print(msg.getResponseText());
+    if (request.isDebugOn())
     {
-      for (IssueFound issueFound : messageReceived.getIssuesFound())
+      try
       {
-        if (issueFound.isError())
+        out.print("-- DEBUG START -------------------------------------------------------\r");
+        out.print("Processed message: " + qualityCollector.getMessageBatch().getBatchReport().getMessageCount() + "\r");
+        List<IssueFound> issuesFound = msg.getIssuesFound();
+        boolean first = true;
+        for (IssueFound issueFound : issuesFound)
         {
-          results.getErrorList().add(new IssueType(issueFound.getIssue().getIssueId(), issueFound.getIssue().getDisplayText()));
-        } else if (issueFound.isWarn())
-        {
-          results.getWarningList().add(new IssueType(issueFound.getIssue().getIssueId(), issueFound.getIssue().getDisplayText()));
+          if (issueFound.isError())
+          {
+            if (first)
+            {
+              out.print("Errors:\r");
+              first = false;
+            }
+            printIssueFound(issueFound, out);
+          }
         }
+        first = true;
+        for (IssueFound issueFound : issuesFound)
+        {
+          if (issueFound.isWarn())
+          {
+            if (first)
+            {
+              out.print("Warnings:\r");
+              first = false;
+            }
+            printIssueFound(issueFound, out);
+          }
+        }
+        first = true;
+        for (IssueFound issueFound : issuesFound)
+        {
+          if (issueFound.isSkip())
+          {
+            if (first)
+            {
+              out.print("Skip:\r");
+              first = false;
+            }
+            printIssueFound(issueFound, out);
+          }
+        }
+        out.print("Message Data: \r");
+        PrintBean.print(msg, out);
+        out.print("-- DEBUG END ---------------------------------------------------------\r");
+      } catch (Exception e)
+      {
+        e.printStackTrace(out);
       }
     }
   }
-*/
+
+  /*
+   * private static void populateResults(Results results, MessageReceived
+   * messageReceived) { results.setReceivedId((int)
+   * messageReceived.getReceivedId());
+   * results.setResponseStatus(messageReceived.
+   * getIssueAction().getActionCode());
+   * results.setResponseText(messageReceived.getResponseText()); if
+   * (results.getErrorList() != null && results.getWarningList() != null) { for
+   * (IssueFound issueFound : messageReceived.getIssuesFound()) { if
+   * (issueFound.isError()) { results.getErrorList().add(new
+   * IssueType(issueFound.getIssue().getIssueId(),
+   * issueFound.getIssue().getDisplayText())); } else if (issueFound.isWarn()) {
+   * results.getWarningList().add(new
+   * IssueType(issueFound.getIssue().getIssueId(),
+   * issueFound.getIssue().getDisplayText())); } } } }
+   */
   private static void printIssueFound(IssueFound issueFound, PrintWriter out)
   {
     out.print("  + ");

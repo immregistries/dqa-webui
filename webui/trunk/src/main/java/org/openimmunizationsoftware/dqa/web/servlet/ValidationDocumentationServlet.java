@@ -20,7 +20,7 @@ import org.openimmunizationsoftware.dqa.db.model.SubmitterProfile;
 import org.openimmunizationsoftware.dqa.manager.KeyedSettingManager;
 import org.openimmunizationsoftware.dqa.manager.OrganizationManager;
 import org.openimmunizationsoftware.dqa.parse.PrintBean;
-import org.openimmunizationsoftware.dqa.parse.VaccinationUpdateParserHL7;
+import org.openimmunizationsoftware.dqa.parse.VaccinationParserHL7;
 import org.openimmunizationsoftware.dqa.validate.Validator;
 
 public class ValidationDocumentationServlet extends HttpServlet
@@ -91,7 +91,7 @@ public class ValidationDocumentationServlet extends HttpServlet
       if (profile != null)
       {
         profile.initPotentialIssueStatus(session);
-        VaccinationUpdateParserHL7 parser = new VaccinationUpdateParserHL7(profile);
+        VaccinationParserHL7 parser = new VaccinationParserHL7(profile);
         MessageReceived messageReceived = new MessageReceived();
         messageReceived.setProfile(profile);
         messageReceived.setRequestText(messageText);
