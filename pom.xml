@@ -24,10 +24,10 @@
     <log4j.version>1.2.14</log4j.version>
   </properties>
   <dependencies>
-      <dependency>
+    <dependency>
       <groupId>org.openimmunizationsoftware.dqa</groupId>
       <artifactId>ois-dqa-core</artifactId>
-      <version>1.5-SNAPSHOT</version>
+      <version>1.6-SNAPSHOT</version>
     </dependency>
 
     <!-- WICKET DEPENDENCIES -->
@@ -43,7 +43,7 @@
       <artifactId>commons-fileupload</artifactId>
       <version>1.2</version>
     </dependency>
-        <dependency>
+    <dependency>
       <groupId>wsdl4j</groupId>
       <artifactId>wsdl4j</artifactId>
       <version>1.6.2</version>
@@ -83,6 +83,14 @@
       <version>4.8.1</version>
       <scope>test</scope>
     </dependency>
+    <!-- If I want to add PHIN-VADS support, this will be needed
+     
+    <dependency>
+      <groupId>com.caucho</groupId>
+      <artifactId>hessian</artifactId>
+      <version>3.1.3</version>
+    </dependency>
+ -->
 
     <!-- JETTY DEPENDENCIES FOR TESTING -->
     <dependency>
@@ -119,14 +127,8 @@
       <artifactId>hibernate-c3p0</artifactId>
       <version>3.3.1.GA</version>
     </dependency>
-<!--
-	<dependency>
-		<groupId>com.oracle</groupId>
-		<artifactId>oracle</artifactId>
-		<version>10.2.0</version>
-	</dependency>
--->
-  <dependency>
+    <!-- <dependency> <groupId>com.oracle</groupId> <artifactId>oracle</artifactId> <version>10.2.0</version> </dependency> -->
+    <dependency>
       <groupId>mysql</groupId>
       <artifactId>mysql-connector-java</artifactId>
       <version>5.1.6</version>
@@ -143,14 +145,8 @@
       <scope>test</scope>
     </dependency>
 
- 
-<!--
-    <dependency>
-      <groupId>org.immunizationsoftware.dqa</groupId>
-      <artifactId>webservice</artifactId>
-      <version>1.0-SNAPSHOT</version>
-    </dependency>
--->     
+
+    <!-- <dependency> <groupId>org.immunizationsoftware.dqa</groupId> <artifactId>webservice</artifactId> <version>1.0-SNAPSHOT</version> </dependency> -->
 
     <dependency>
       <groupId>org.quartz-scheduler</groupId>
@@ -163,7 +159,7 @@
       <artifactId>c3p0</artifactId>
       <version>0.9.1.2</version>
     </dependency>
-    
+
   </dependencies>
   <build>
     <resources>

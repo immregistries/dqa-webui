@@ -9,8 +9,8 @@ import org.openimmunizationsoftware.dqa.db.model.SubmitterProfile;
 import org.openimmunizationsoftware.dqa.db.model.received.NextOfKin;
 import org.openimmunizationsoftware.dqa.db.model.received.Patient;
 import org.openimmunizationsoftware.dqa.db.model.received.Vaccination;
-import org.openimmunizationsoftware.dqa.parse.VaccinationUpdateParser;
-import org.openimmunizationsoftware.dqa.parse.VaccinationUpdateParserHL7;
+import org.openimmunizationsoftware.dqa.parse.VaccinationParser;
+import org.openimmunizationsoftware.dqa.parse.VaccinationParserHL7;
 
 import junit.framework.TestCase;
 
