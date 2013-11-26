@@ -1,3 +1,10 @@
+/*
+ * Copyright 2013 by Dandelion Software & Research, Inc (DSR)
+ * 
+ * This application was written for immunization information system (IIS) community and has
+ * been released by DSR under an Apache 2 License with the hope that this software will be used
+ * to improve Public Health.  
+ */
 package org.openimmunizationsoftware.dqa;
 
 import java.io.BufferedReader;
@@ -497,64 +504,71 @@ public class IncomingServlet extends HttpServlet
 
     return debugOn;
   }
+  
+  private static final boolean ALLOW_DEBUG_TO_WORK = false;
 
   private void printMessage(MessageReceivedGeneric msg, QualityCollector qualityCollector, PrintWriter out, MessageProcessRequest request)
   {
 
     out.print(msg.getResponseText());
-    if (request.isDebugOn())
+    if (ALLOW_DEBUG_TO_WORK && request.isDebugOn())
     {
-      try
+      printDebug(msg, qualityCollector, out);
+    }
+  }
+
+  public void printDebug(MessageReceivedGeneric msg, QualityCollector qualityCollector, PrintWriter out)
+  {
+    try
+    {
+      out.print("-- DEBUG START -------------------------------------------------------\r");
+      out.print("Processed message: " + qualityCollector.getMessageBatch().getBatchReport().getMessageCount() + "\r");
+      List<IssueFound> issuesFound = msg.getIssuesFound();
+      boolean first = true;
+      for (IssueFound issueFound : issuesFound)
       {
-        out.print("-- DEBUG START -------------------------------------------------------\r");
-        out.print("Processed message: " + qualityCollector.getMessageBatch().getBatchReport().getMessageCount() + "\r");
-        List<IssueFound> issuesFound = msg.getIssuesFound();
-        boolean first = true;
-        for (IssueFound issueFound : issuesFound)
+        if (issueFound.isError())
         {
-          if (issueFound.isError())
+          if (first)
           {
-            if (first)
-            {
-              out.print("Errors:\r");
-              first = false;
-            }
-            printIssueFound(issueFound, out);
+            out.print("Errors:\r");
+            first = false;
           }
+          printIssueFound(issueFound, out);
         }
-        first = true;
-        for (IssueFound issueFound : issuesFound)
-        {
-          if (issueFound.isWarn())
-          {
-            if (first)
-            {
-              out.print("Warnings:\r");
-              first = false;
-            }
-            printIssueFound(issueFound, out);
-          }
-        }
-        first = true;
-        for (IssueFound issueFound : issuesFound)
-        {
-          if (issueFound.isSkip())
-          {
-            if (first)
-            {
-              out.print("Skip:\r");
-              first = false;
-            }
-            printIssueFound(issueFound, out);
-          }
-        }
-        out.print("Message Data: \r");
-        PrintBean.print(msg, out);
-        out.print("-- DEBUG END ---------------------------------------------------------\r");
-      } catch (Exception e)
-      {
-        e.printStackTrace(out);
       }
+      first = true;
+      for (IssueFound issueFound : issuesFound)
+      {
+        if (issueFound.isWarn())
+        {
+          if (first)
+          {
+            out.print("Warnings:\r");
+            first = false;
+          }
+          printIssueFound(issueFound, out);
+        }
+      }
+      first = true;
+      for (IssueFound issueFound : issuesFound)
+      {
+        if (issueFound.isSkip())
+        {
+          if (first)
+          {
+            out.print("Skip:\r");
+            first = false;
+          }
+          printIssueFound(issueFound, out);
+        }
+      }
+      out.print("Message Data: \r");
+      PrintBean.print(msg, out);
+      out.print("-- DEBUG END ---------------------------------------------------------\r");
+    } catch (Exception e)
+    {
+      e.printStackTrace(out);
     }
   }
 
