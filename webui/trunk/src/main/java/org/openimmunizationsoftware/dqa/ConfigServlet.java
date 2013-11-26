@@ -1,3 +1,10 @@
+/*
+ * Copyright 2013 by Dandelion Software & Research, Inc (DSR)
+ * 
+ * This application was written for immunization information system (IIS) community and has
+ * been released by DSR under an Apache 2 License with the hope that this software will be used
+ * to improve Public Health.  
+ */
 package org.openimmunizationsoftware.dqa;
 
 import java.io.IOException;
@@ -412,7 +419,7 @@ public class ConfigServlet extends HttpServlet
       out.println("    <br/>");
       out.println("          <input type=\"submit\" name=\"action\" value=\"update template profile\"/></td>");
       out.println("    </form>");
-      out.println("    <p><a href=\"reportTemplate?templateId="+ reportTemplate.getTemplateId() + "&action=showXML\">Report Template XML</a>");
+      out.println("    <p><a href=\"reportTemplate?templateId=" + reportTemplate.getTemplateId() + "&action=showXML\">Report Template XML</a>");
       out.println("    </p>");
 
     } else if (menu.equals(MENU_TEST))
@@ -681,6 +688,13 @@ public class ConfigServlet extends HttpServlet
         .setValidValues(new String[] { "", "1", "2", "3", "4", "5", "6", "7" }).setIndent());
     configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.WEEKLY_EXPORT_START_TIME, "Export time after (HH:MM)", "").setIndent());
     configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.WEEKLY_EXPORT_END_TIME, "Export time before (HH:MM)", "").setIndent());
+
+    configKeyedSettingsList.add(new ConfigKeyedSetting(null, "CDS Software", ""));
+    configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.CDS_SOFTWARE_SERVICE_ENABLED, "Service enabled", "").setValidValues(new String[] {
+        "", "Y", "N" }));
+    configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.CDS_SOFTWARE_SERVICE_TYPE, "Service type", "").setIndent());
+    configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.CDS_SOFTWARE_SERVICE_URL, "Service URL", "").setIndent());
+
   }
 
 }

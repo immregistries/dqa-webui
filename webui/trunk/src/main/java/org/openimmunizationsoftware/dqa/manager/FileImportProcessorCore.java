@@ -1,3 +1,10 @@
+/*
+ * Copyright 2013 by Dandelion Software & Research, Inc (DSR)
+ * 
+ * This application was written for immunization information system (IIS) community and has
+ * been released by DSR under an Apache 2 License with the hope that this software will be used
+ * to improve Public Health.  
+ */
 package org.openimmunizationsoftware.dqa.manager;
 
 import java.io.BufferedReader;
@@ -15,8 +22,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.openimmunizationsoftware.dqa.SoftwareVersion;
@@ -33,6 +43,7 @@ import org.openimmunizationsoftware.dqa.db.model.ReceiveQueue;
 import org.openimmunizationsoftware.dqa.db.model.SubmitStatus;
 import org.openimmunizationsoftware.dqa.db.model.SubmitterProfile;
 import org.openimmunizationsoftware.dqa.parse.VaccinationParserHL7;
+import org.openimmunizationsoftware.dqa.quality.AnalysisReport;
 import org.openimmunizationsoftware.dqa.quality.QualityCollector;
 import org.openimmunizationsoftware.dqa.quality.QualityReport;
 import org.openimmunizationsoftware.dqa.validate.Validator;
@@ -47,6 +58,7 @@ public class FileImportProcessorCore
   private File ackFile;
   private File reportFile;
   private File errorsFile;
+  private File analysisDir;
   private File logFile;
   private PrintWriter ackOut;
   private PrintWriter logOut;
@@ -76,6 +88,11 @@ public class FileImportProcessorCore
   public File getErrorsFile()
   {
     return errorsFile;
+  }
+
+  public File getAnalysisDir()
+  {
+    return analysisDir;
   }
 
   public PrintWriter getProcessingOut()
@@ -296,7 +313,7 @@ public class FileImportProcessorCore
         printLogDetails(message, messageReceived, errorsOut, true);
         procLog(" + REJECTED ");
       }
-      
+
       tx.commit();
     } catch (Throwable exception)
     {
@@ -404,20 +421,27 @@ public class FileImportProcessorCore
     logFile = new File(receiveDir, filename + ".log.txt");
     reportFile = new File(receiveDir, filename + ".report.html");
     errorsFile = new File(receiveDir, filename + ".errors.txt");
+    analysisDir = new File(receiveDir, filename + ".analysis");
     ackOut = new PrintWriter(new FileWriter(ackFile));
     logOut = new PrintWriter(new FileWriter(logFile));
     reportOut = new PrintWriter(new FileWriter(reportFile));
     errorsOut = new PrintWriter(new FileWriter(errorsFile));
   }
 
-  private void printReport(File inFile, Session session)
+  private void printReport(File inFile, Session session) throws IOException 
   {
+    procLog("Creating DQA Report");
     Transaction tx = session.beginTransaction();
     qualityCollector.score();
-    QualityReport qualityReport = new QualityReport(qualityCollector, profile, reportOut);
+    QualityReport qualityReport = new QualityReport(qualityCollector, profile, session, reportOut);
     qualityReport.setFilename(inFile.getName());
     qualityReport.printReport();
+    procLog("Creating Analysis Report");
+    AnalysisReport analysisReport = new AnalysisReport(qualityCollector, session, profile, analysisDir);
+    analysisReport.setFilename(inFile.getName());
+    analysisReport.printReport();
     tx.commit();
+    procLog("Finished creating reports");
   }
 
   private void saveAndCloseBatch(Session session)
@@ -546,10 +570,10 @@ public class FileImportProcessorCore
       if (printDetails)
       {
         out.println("Message Data: ");
-        printBean(out, messageReceived, "  ");
+        printBean(out, messageReceived, "  ", new HashSet<Object>());
       }
-      out.format("Current processing speed: %.2f messages/second ", ((float) thread.getProgressCount())
-          / ((System.currentTimeMillis() - thread.getProgressStart()) / 1000.0));
+      out.format("Current processing speed: %.2f messages/second ",
+          ((float) thread.getProgressCount()) / ((System.currentTimeMillis() - thread.getProgressStart()) / 1000.0));
 
       out.println();
       out.println();
@@ -559,10 +583,16 @@ public class FileImportProcessorCore
     }
   }
 
-  private static List<String> printBean(PrintWriter out, Object object, String indent) throws IllegalAccessException, InvocationTargetException
+  private static List<String> printBean(PrintWriter out, Object object, String indent, Set<Object> objectsPrinted) throws IllegalAccessException,
+      InvocationTargetException
   {
     List<String> thisPrinted = new ArrayList<String>();
     List<String> subPrinted = new ArrayList<String>();
+    if (objectsPrinted.contains(object))
+    {
+      return thisPrinted;
+    }
+    objectsPrinted.add(object);
     Method[] methods = object.getClass().getMethods();
     Arrays.sort(methods, new Comparator<Method>() {
       public int compare(Method o1, Method o2)
@@ -610,13 +640,13 @@ public class FileImportProcessorCore
             out.print(fieldName);
             out.print(" #");
             out.println(i + 1);
-            printBean(out, list.get(i), indent + "  ");
+            printBean(out, list.get(i), indent + "  ", objectsPrinted);
           }
         } else
         {
           out.print(indent);
           out.println(fieldName);
-          List<String> returnPrints = printBean(out, returnValue, indent + "  ");
+          List<String> returnPrints = printBean(out, returnValue, indent + "  ", objectsPrinted);
           for (String returnPrint : returnPrints)
           {
             subPrinted.add(fieldName + returnPrint);

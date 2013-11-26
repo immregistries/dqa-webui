@@ -1,3 +1,10 @@
+/*
+ * Copyright 2013 by Dandelion Software & Research, Inc (DSR)
+ * 
+ * This application was written for immunization information system (IIS) community and has
+ * been released by DSR under an Apache 2 License with the hope that this software will be used
+ * to improve Public Health.  
+ */
 package org.openimmunizationsoftware.dqa.manager;
 
 import java.io.BufferedReader;
@@ -236,7 +243,7 @@ public class FileImportProcessor extends ManagerThread
         }
       } else
       {
-        procLog("Postponing processing, file changed " + (timeSinceLastChange / 1000) + " seconds ago");
+        procLog("Postponing processing, file changed " + (timeSinceLastChange / 1000) + " seconds ago (will process after 60 seconds has elapsed)");
         procLog(" + current time: " + sdf.format(new Date()));
         procLog(" + changed time: " + sdf.format(inFile.lastModified()));
         internalLog.append(" + postponing processing, file recently changed");
@@ -428,11 +435,11 @@ public class FileImportProcessor extends ManagerThread
     tx.commit();
   }
 
-  private void printReport(File inFile, Session session)
+  private void printReport(File inFile, Session session) throws IOException
   {
     Transaction tx = session.beginTransaction();
     qualityCollector.score();
-    QualityReport qualityReport = new QualityReport(qualityCollector, profile, reportOut);
+    QualityReport qualityReport = new QualityReport(qualityCollector, profile, session, reportOut);
     qualityReport.setFilename(inFile.getName());
     qualityReport.printReport();
     tx.commit();
