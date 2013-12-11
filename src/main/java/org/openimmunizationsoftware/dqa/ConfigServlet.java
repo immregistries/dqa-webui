@@ -690,8 +690,8 @@ public class ConfigServlet extends HttpServlet
     configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.WEEKLY_EXPORT_END_TIME, "Export time before (HH:MM)", "").setIndent());
 
     configKeyedSettingsList.add(new ConfigKeyedSetting(null, "CDS Software", ""));
-    configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.CDS_SOFTWARE_SERVICE_ENABLED, "Service enabled", "").setValidValues(new String[] {
-        "", "Y", "N" }));
+    configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.CDS_SOFTWARE_SERVICE_ENABLED, "Service enabled", "").setIndent().setValidValues(
+        new String[] { "", "Y", "N" }));
     configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.CDS_SOFTWARE_SERVICE_TYPE, "Service type", "").setIndent());
     configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.CDS_SOFTWARE_SERVICE_URL, "Service URL", "").setIndent());
 
