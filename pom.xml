@@ -4,7 +4,7 @@
 	<groupId>org.openimmunizationsoftware.dqa</groupId>
 	<artifactId>ois-dqa-wicket</artifactId>
 	<packaging>war</packaging>
-	<version>1.7-SNAPSHOT</version>
+	<version>1.7</version>
 	<name>DQA</name>
 	<description></description>
 	<organization>
@@ -28,7 +28,7 @@
 		<dependency>
 			<groupId>org.openimmunizationsoftware.dqa</groupId>
 			<artifactId>ois-dqa-core</artifactId>
-			<version>1.7-SNAPSHOT</version>
+			<version>1.7</version>
 		</dependency>
 
 		<!-- WICKET DEPENDENCIES -->
@@ -124,11 +124,13 @@
 			<artifactId>hibernate-c3p0</artifactId>
 			<version>3.3.1.GA</version>
 		</dependency>
+    <!-- 
 		<dependency>
 			<groupId>com.oracle</groupId>
 			<artifactId>oracle</artifactId>
 			<version>10.2.0</version>
 		</dependency>
+     -->
 		<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
