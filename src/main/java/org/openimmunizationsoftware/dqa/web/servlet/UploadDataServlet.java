@@ -34,10 +34,10 @@ import org.openimmunizationsoftware.dqa.db.model.KeyedSetting;
 import org.openimmunizationsoftware.dqa.db.model.Organization;
 import org.openimmunizationsoftware.dqa.db.model.ReportTemplate;
 import org.openimmunizationsoftware.dqa.db.model.SubmitterProfile;
-import org.openimmunizationsoftware.dqa.manager.FileImportProcessorCore;
 import org.openimmunizationsoftware.dqa.manager.KeyedSettingManager;
 import org.openimmunizationsoftware.dqa.manager.ManagerThread;
 import org.openimmunizationsoftware.dqa.manager.OrganizationManager;
+import org.openimmunizationsoftware.dqa.manager.ProcessorCore;
 import org.openimmunizationsoftware.dqa.parse.VaccinationParserHL7;
 
 public class UploadDataServlet extends HttpServlet
@@ -254,20 +254,20 @@ public class UploadDataServlet extends HttpServlet
           ManagerThread thread = new ManagerThread("UploadDataServlet");
           out.println("<p>Processing log:</p>");
           out.println("<pre class=\"scrollbox\">");
-          FileImportProcessorCore fileImportProcessorCore = new FileImportProcessorCore(out, thread, profile, parser, acceptedDir, acceptedDir);
-          fileImportProcessorCore.processFile(session, filename, file);
+          ProcessorCore processorCore = new ProcessorCore(out, thread, profile, acceptedDir, acceptedDir);
+          processorCore.process(session, filename, file);
           out.println("</pre>");
           HttpSession httpSession = request.getSession(true);
-          httpSession.setAttribute("ack", fileImportProcessorCore.getAckFile());
-          httpSession.setAttribute("log", fileImportProcessorCore.getLogFile());
-          httpSession.setAttribute("errors", fileImportProcessorCore.getErrorsFile());
-          httpSession.setAttribute("report", fileImportProcessorCore.getReportFile());
+          httpSession.setAttribute("ack", processorCore.getAckFile());
+          httpSession.setAttribute("log", processorCore.getLogFile());
+          httpSession.setAttribute("errors", processorCore.getErrorsFile());
+          httpSession.setAttribute("report", processorCore.getReportFile());
           out.println("<p>Data was loaded. Records available:</p>");
           out.println("<ul>");
-          out.println("<li><a href=\"" + response.encodeUrl("uploadData?action=ack") + "\">Acknowledgements File</a></li>");
-          out.println("<li><a href=\"" + response.encodeUrl("uploadData?action=log") + "\">Log File</a></li>");
-          out.println("<li><a href=\"" + response.encodeUrl("uploadData?action=errors") + "\">Errors File</a></li>");
-          out.println("<li><a href=\"" + response.encodeUrl("uploadData?action=report") + "\">DQA Report</a></li>");
+          out.println("<li><a href=\"" + response.encodeURL("uploadData?action=ack") + "\">Acknowledgements File</a></li>");
+          out.println("<li><a href=\"" + response.encodeURL("uploadData?action=log") + "\">Log File</a></li>");
+          out.println("<li><a href=\"" + response.encodeURL("uploadData?action=errors") + "\">Errors File</a></li>");
+          out.println("<li><a href=\"" + response.encodeURL("uploadData?action=report") + "\">DQA Report</a></li>");
           out.println("</ul>");
         } finally
         {

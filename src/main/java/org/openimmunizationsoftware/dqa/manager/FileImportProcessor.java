@@ -213,7 +213,7 @@ public class FileImportProcessor extends ManagerThread
       procLog("Using profile " + profile.getProfileId() + " '" + profile.getProfileLabel() + "' for organization '"
           + profile.getOrganization().getOrgLabel() + "'");
     }
-    parser = new VaccinationParserHL7(profile);
+    
   }
 
   private void lookToProcessFile(Session session, String filename) throws FileNotFoundException, IOException
@@ -226,20 +226,23 @@ public class FileImportProcessor extends ManagerThread
       long timeSinceLastChange = System.currentTimeMillis() - inFile.lastModified();
       if (timeSinceLastChange > (60 * 1000))
       {
-        if (fileContainsHL7(inFile))
+        if (fileCanBeProcessed(inFile))
         {
           procLog("Processing file " + filename);
           internalLog.append("  + processing file... ");
           try
           {
             ProcessLocker.lock(profile);
-            FileImportProcessorCore fileImportProcessorCore = new FileImportProcessorCore(processingOut, this, profile, parser, acceptedDir,
+            ProcessorCore fileImportProcessorCore = new ProcessorCore(processingOut, this, profile, acceptedDir,
                 receiveDir);
-            fileImportProcessorCore.processFile(session, filename, inFile);
+            fileImportProcessorCore.process(session, filename, inFile);
           } finally
           {
             ProcessLocker.unlock(profile);
           }
+        } else
+        {
+          procLog("File does not contain processable data or is not complete: " + filename);
         }
       } else
       {
@@ -269,7 +272,7 @@ public class FileImportProcessor extends ManagerThread
    * @return
    * @throws IOException
    */
-  private boolean fileContainsHL7(File inFile) throws IOException
+  private boolean fileCanBeProcessed(File inFile) throws IOException
   {
     BufferedReader in = new BufferedReader(new FileReader(inFile));
     String line = readRealFirstLine(in);
@@ -292,6 +295,9 @@ public class FileImportProcessor extends ManagerThread
     } else if (line.startsWith("MSH"))
     {
       procLog("WARNING: File does not start with FHS segment as expected. ");
+      okay = true;
+    } else if (line.startsWith("Patient|"))
+    {
       okay = true;
     } else
     {
@@ -508,6 +514,7 @@ public class FileImportProcessor extends ManagerThread
       messageReceived.setReceivedDate(receivedDate);
       messageReceived.setProfile(profile);
       messageReceived.setRequestText(message.toString());
+      
       parser.createVaccinationUpdateMessage(messageReceived);
       if (!messageReceived.hasErrors())
       {
