@@ -7,8 +7,11 @@
  */
 package org.openimmunizationsoftware.dqa;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.Clob;
+import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -29,6 +32,8 @@ import org.openimmunizationsoftware.dqa.db.model.IssueAction;
 import org.openimmunizationsoftware.dqa.db.model.KeyedSetting;
 import org.openimmunizationsoftware.dqa.db.model.PotentialIssueStatus;
 import org.openimmunizationsoftware.dqa.db.model.ReportTemplate;
+import org.openimmunizationsoftware.dqa.db.model.Submission;
+import org.openimmunizationsoftware.dqa.db.model.SubmissionAnalysis;
 import org.openimmunizationsoftware.dqa.db.model.SubmitterProfile;
 import org.openimmunizationsoftware.dqa.db.model.UserAccount;
 import org.openimmunizationsoftware.dqa.manager.ManagerThread;
@@ -49,6 +54,7 @@ public class ConfigServlet extends HttpServlet
   private static final String MENU_LOGIN = "login";
   private static final String MENU_SETTINGS = "settings";
   private static final String MENU_RELOAD = "reload";
+  private static final String MENU_SUBMISSIONS = "submissions";
 
   @Override
   protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
@@ -223,6 +229,7 @@ public class ConfigServlet extends HttpServlet
       out.println("    <div class=\"menu\">");
       out.println("      <a class=\"menuLink\" href=\"config?menu=" + MENU_APPLICATION + "\">Application</a><br>");
       out.println("      <a class=\"menuLink\" href=\"config?menu=" + MENU_STATUS + "\">Status</a><br>");
+      out.println("      <a class=\"menuLink\" href=\"config?menu=" + MENU_SUBMISSIONS + "\">Submissions</a><br>");
       out.println("      <a class=\"menuLink\" href=\"config?menu=" + MENU_SETTINGS + "\">Settings</a><br>");
       out.println("      <a class=\"menuLink\" href=\"config?menu=" + MENU_RELOAD + "\">Reload</a><br>");
       out.println("      <a class=\"menuLink\" href=\"config?menu=" + MENU_TEST + "\">Test</a><br>");
@@ -287,6 +294,7 @@ public class ConfigServlet extends HttpServlet
     {
       out.println("      <h2>Status</h2>");
       printManagerThread(IncomingServlet.fileImportManager, out);
+      printManagerThread(IncomingServlet.submissionManager, out);
       printManagerThread(IncomingServlet.weeklyBatchManager, out);
       printManagerThread(IncomingServlet.weeklyExportManager, out);
     } else if (menu.equals(MENU_REPORT_TEMPLATE))
@@ -528,6 +536,161 @@ public class ConfigServlet extends HttpServlet
       out.println("      </table>");
       out.println("    </form>");
 
+    } else if (menu.equals(MENU_SUBMISSIONS))
+    {
+      SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss a");
+      String submissionIdString = req.getParameter("submissionId");
+      if (submissionIdString == null)
+      {
+        Query query = session.createQuery("from Submission order by createdDate");
+        List<Submission> submissionList = query.list();
+        out.println("<h2>Submissions</h2>");
+        out.println("<table>");
+        out.println("  <tr>");
+        out.println("    <th>Id</th>");
+        out.println("    <th>Submitter Name</th>");
+        out.println("    <th>Request Name</th>");
+        out.println("    <th>Status</th>");
+        out.println("    <th>Date</th>");
+        out.println("  </tr>");
+        for (Submission submission : submissionList)
+        {
+          String link = "config?menu=" + MENU_SUBMISSIONS + "&submissionId=" + submission.getSubmissionId();
+          out.println("  <tr>");
+          out.println("    <td><a href=\"" + link + "\">" + submission.getSubmissionId() + "</a></td>");
+          out.println("    <td><a href=\"" + link + "\">" + submission.getSubmitterName() + "</a></td>");
+          out.println("    <td><a href=\"" + link + "\">" + submission.getRequestName() + "</a></td>");
+          out.println("    <td><a href=\"" + link + "\">" + submission.getSubmissionStatusLabel() + "</a></td>");
+          out.println("    <td><a href=\"" + link + "\">" + sdf.format(submission.getSubmissionStatusDate()) + "</a></td>");
+          out.println("  </tr>");
+        }
+        out.println("</table>");
+      } else
+      {
+        int submissionId = Integer.parseInt(submissionIdString);
+        Submission submission = (Submission) session.get(Submission.class, submissionId);
+        String view = req.getParameter("view");
+        if (view != null)
+        {
+          if (view.equals("report"))
+          {
+            printClob(out, submission.getResponseReport());
+          } else if (view.equals("analysis"))
+          {
+            String submissionAnalysisIdString = req.getParameter("submissionAnalysisId");
+            if (submissionAnalysisIdString != null)
+            {
+              int submissionAnalysisId = Integer.parseInt(submissionAnalysisIdString);
+              SubmissionAnalysis submissionAnalysis = (SubmissionAnalysis) session.get(SubmissionAnalysis.class, submissionAnalysisId);
+              printClob(out, submissionAnalysis.getAnalysisContent());
+            } else
+            {
+              printClob(out, submission.getResponseAnalysis());
+            }
+          }
+        } else
+        {
+          String link = "config?menu=" + MENU_SUBMISSIONS + "&submissionId=" + submission.getSubmissionId();
+          out.println("<h2>Submission from " + submission.getSubmitterName() + "</h2>");
+          out.println("<table>");
+          out.println("  <tr>");
+          out.println("    <th>Id</th>");
+          out.println("    <td>" + submission.getSubmissionId() + "</td>");
+          out.println("  </tr>");
+          out.println("  <tr>");
+          out.println("    <th>Submitter Name</th>");
+          out.println("    <td>" + submission.getSubmitterName() + "</td>");
+          out.println("  </tr>");
+          out.println("  <tr>");
+          out.println("    <th>Request Name</th>");
+          out.println("    <td>" + submission.getRequestName() + "</td>");
+          out.println("  </tr>");
+          if (submission.getProfile() != null)
+          {
+            out.println("  <tr>");
+            out.println("    <th>Profile</th>");
+            out.println("    <td>" + submission.getProfile().getProfileId() + ": " + submission.getProfile().getProfileLabel() + "</td>");
+            out.println("  </tr>");
+          }
+          if (submission.getBatch() != null)
+          {
+            out.println("  <tr>");
+            out.println("    <th>Message Batch</th>");
+            out.println("    <td>" + submission.getBatch().getBatchId() + ": " + submission.getBatch().getBatchTitle() + "</td>");
+            out.println("  </tr>");
+
+          }
+          out.println("  <tr>");
+          out.println("    <th>Submission Status</th>");
+          out.println("    <td>" + submission.getSubmissionStatusLabel() + "</td>");
+          out.println("  </tr>");
+          out.println("  <tr>");
+          out.println("    <th>Submission Status Date</th>");
+          out.println("    <td>" + sdf.format(submission.getSubmissionStatusDate()) + "</td>");
+          out.println("  </tr>");
+          out.println("  <tr>");
+          out.println("    <th>Created Date</th>");
+          out.println("    <td>" + sdf.format(submission.getCreatedDate()) + "</td>");
+          out.println("  </tr>");
+          out.println("  <tr>");
+          out.println("    <th>Submitter Defined Value 1</th>");
+          out.println("    <td>" + submission.getSubmitterDefinedValue1() + "</td>");
+          out.println("  </tr>");
+          out.println("  <tr>");
+          out.println("    <th>Submitter Defined Value 2</th>");
+          out.println("    <td>" + submission.getSubmitterDefinedValue2() + "</td>");
+          out.println("  </tr>");
+          out.println("</table>");
+          out.println("<h3>Request</h3>");
+          printClobLimited(out, submission.getRequestContent());
+          if (submission.getResponseContent() != null)
+          {
+            out.println("<h3>Response</h3>");
+            printClobLimited(out, submission.getResponseContent());
+          }
+          if (submission.getResponseDetailLog() != null)
+          {
+            out.println("<h3>Log</h3>");
+            printClobLimited(out, submission.getResponseDetailLog());
+          }
+          if (submission.getResponseDetailError() != null)
+          {
+            out.println("<h3>Error Log</h3>");
+            printClobLimited(out, submission.getResponseDetailError());
+          }
+          if (submission.getResponseReport() != null)
+          {
+            out.println("<h3>DQA Report</h3>");
+            out.println("<p><a href=\"" + link + "&view=report\">View</a></p>");
+          }
+          if (submission.getResponseAnalysis() != null)
+          {
+            out.println("<h3>Analysis</h3>");
+            out.println("<p><a href=\"" + link + "&view=analysis\">View</a></p>");
+            Query query = session.createQuery("from SubmissionAnalysis where submission = ?");
+            query.setParameter(0, submission);
+            List<SubmissionAnalysis> submissionAnalsyisList = query.list();
+            if (submissionAnalsyisList.size() > 0)
+            {
+              out.println("<table>");
+              out.println("  <tr>");
+              out.println("    <th>Analysis Label</th>");
+              out.println("    <th>Message Received Id</th>");
+              out.println("  <tr>");
+              for (SubmissionAnalysis submissionAnalysis : submissionAnalsyisList)
+              {
+                String analysisLink = link + "&view=analysis&submissionAnalysisId=" + submissionAnalysis.getSubmissionAnalysisId();
+                out.println("  <tr>");
+                out.println("    <td><a href=\"" + analysisLink + "\">" + submissionAnalysis.getAnalysisLabel() + "</a></td>");
+                out.println("    <td><a href=\"" + analysisLink + "\">" + submissionAnalysis.getMessageReceived().getReceivedId() + "</a></td>");
+                out.println("  <tr>");
+              }
+              out.println("</table>");
+            }
+          }
+
+        }
+      }
     }
     out.println("    <hr>");
     out.println("    <p>Version " + SoftwareVersion.VERSION + "</p>");
@@ -536,6 +699,50 @@ public class ConfigServlet extends HttpServlet
     out.close();
     session.flush();
     session.close();
+  }
+
+  public void printClobLimited(PrintWriter out, Clob requestContent) throws IOException
+  {
+    out.println("<pre>");
+    try
+    {
+      BufferedReader reader;
+      reader = new BufferedReader(requestContent.getCharacterStream());
+      int count = 0;
+      String line;
+      while (count < 100 && (line = reader.readLine()) != null)
+      {
+        count++;
+        out.println(line);
+      }
+      if (count == 100)
+      {
+        out.println("... [more content, but it is not displayed here]");
+      }
+      reader.close();
+    } catch (SQLException sqle)
+    {
+      sqle.printStackTrace(out);
+    }
+    out.println("</pre>");
+  }
+
+  public void printClob(PrintWriter out, Clob requestContent) throws IOException
+  {
+    try
+    {
+      BufferedReader reader;
+      reader = new BufferedReader(requestContent.getCharacterStream());
+      String line;
+      while ((line = reader.readLine()) != null)
+      {
+        out.println(line);
+      }
+      reader.close();
+    } catch (SQLException sqle)
+    {
+      sqle.printStackTrace(out);
+    }
   }
 
   private void printManagerThread(ManagerThread mt, PrintWriter out)
@@ -630,6 +837,10 @@ public class ConfigServlet extends HttpServlet
     configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.IN_FILE_WAIT, "Wait after last update (secs)", "").setIndent());
     configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.IN_FILE_EXPORT_CONNECTION_SCRIPT, "Export connection script", "").setValidValues(
         new String[] { "", "Y", "N" }).setIndent());
+
+    configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.IN_SUBMISSION_ENABLE, "Read submission table enabled", "")
+        .setValidValues(new String[] { "", "Y", "N" }));
+    configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.IN_SUBMISSION_WAIT, "Pause after checking for updates (secs)", "").setIndent());
 
     configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.UPLOAD_ENABLED, "Upload enabled", "")
         .setValidValues(new String[] { "", "Y", "N" }));

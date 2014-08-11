@@ -29,7 +29,6 @@ import org.openimmunizationsoftware.dqa.db.model.CodeReceived;
 import org.openimmunizationsoftware.dqa.db.model.CodeTable;
 import org.openimmunizationsoftware.dqa.db.model.IssueFound;
 import org.openimmunizationsoftware.dqa.db.model.MessageBatch;
-import org.openimmunizationsoftware.dqa.db.model.MessageReceived;
 import org.openimmunizationsoftware.dqa.db.model.MessageReceivedGeneric;
 import org.openimmunizationsoftware.dqa.db.model.Organization;
 import org.openimmunizationsoftware.dqa.db.model.ReportTemplate;
@@ -38,6 +37,7 @@ import org.openimmunizationsoftware.dqa.db.model.UserAccount;
 import org.openimmunizationsoftware.dqa.manager.CodesReceived;
 import org.openimmunizationsoftware.dqa.manager.FileImportManager;
 import org.openimmunizationsoftware.dqa.manager.OrganizationManager;
+import org.openimmunizationsoftware.dqa.manager.SubmissionManager;
 import org.openimmunizationsoftware.dqa.manager.WeeklyBatchManager;
 import org.openimmunizationsoftware.dqa.manager.WeeklyExportManager;
 import org.openimmunizationsoftware.dqa.parse.PrintBean;
@@ -51,6 +51,7 @@ public class IncomingServlet extends HttpServlet
 {
 
   protected static FileImportManager fileImportManager = null;
+  protected static SubmissionManager submissionManager = null;
   protected static WeeklyBatchManager weeklyBatchManager = null;
   protected static WeeklyExportManager weeklyExportManager = null;
 
@@ -58,6 +59,7 @@ public class IncomingServlet extends HttpServlet
   public void init() throws ServletException
   {
     fileImportManager = FileImportManager.getFileImportManager();
+    submissionManager = SubmissionManager.getSubmissionManager();
     weeklyBatchManager = WeeklyBatchManager.getWeeklyBatchManager();
     weeklyExportManager = WeeklyExportManager.getWeeklyExportManager();
   }

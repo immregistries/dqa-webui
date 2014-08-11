@@ -265,6 +265,7 @@ public class TestPotentialIssues extends TestCase
     assertNotNull(pi.PatientGuardianAddressZipIsMissing);
     assertNotNull(pi.PatientGuardianNameIsMissing);
     assertNotNull(pi.PatientGuardianNameIsSameAsUnderagePatient);
+    assertNotNull(pi.PatientGuardianNameHasJunkName);
     assertNotNull(pi.PatientGuardianNameFirstIsMissing);
     assertNotNull(pi.PatientGuardianNameLastIsMissing);
     assertNotNull(pi.PatientGuardianResponsiblePartyIsMissing);
@@ -283,11 +284,15 @@ public class TestPotentialIssues extends TestCase
     assertNotNull(pi.PatientMedicaidNumberIsInvalid);
     assertNotNull(pi.PatientMedicaidNumberIsMissing);
     assertNotNull(pi.PatientMiddleNameIsMissing);
+    assertNotNull(pi.PatientMiddleNameIsInvalid);
     assertNotNull(pi.PatientMiddleNameMayBeInitial);
     assertNotNull(pi.PatientMiddleNameIsTooShort);
     assertNotNull(pi.PatientMiddleNameIsUnexpectedlyShort);
     assertNotNull(pi.PatientMiddleNameIsUnexpectedlyLong);
     assertNotNull(pi.PatientMiddleNameIsTooLong);
+    assertNotNull(pi.PatientMotherSMaidenNameIsInvalid);
+    assertNotNull(pi.PatientMotherSMaidenNameHasJunkName);
+    assertNotNull(pi.PatientMotherSMaidenNameHasInvalidPrefixes);
     assertNotNull(pi.PatientMotherSMaidenNameIsMissing);
     assertNotNull(pi.PatientMotherSMaidenNameIsTooShort);
     assertNotNull(pi.PatientMotherSMaidenNameIsUnexpectedlyShort);
@@ -295,6 +300,7 @@ public class TestPotentialIssues extends TestCase
     assertNotNull(pi.PatientMotherSMaidenNameIsTooLong);
     assertNotNull(pi.PatientNameMayBeTemporaryNewbornName);
     assertNotNull(pi.PatientNameMayBeTestName);
+    assertNotNull(pi.PatientNameHasJunkName);
     assertNotNull(pi.PatientNameIsAKnownTestName);
     assertNotNull(pi.PatientNameFirstIsInvalid);
     assertNotNull(pi.PatientNameFirstIsMissing);
@@ -378,6 +384,10 @@ public class TestPotentialIssues extends TestCase
     assertNotNull(pi.PatientSubmitterIdTypeCodeIsInvalid);
     assertNotNull(pi.PatientSubmitterIdTypeCodeIsUnrecognized);
     assertNotNull(pi.PatientSubmitterIdTypeCodeIsIgnored);
+    assertNotNull(pi.PatientSystemCreationDateIsMissing);
+    assertNotNull(pi.PatientSystemCreationDateIsInvalid);
+    assertNotNull(pi.PatientSystemCreationDateIsBeforeBirth);
+    assertNotNull(pi.PatientSystemCreationDateIsInFuture);
     assertNotNull(pi.PatientVfcEffectiveDateIsBeforeBirth);
     assertNotNull(pi.PatientVfcEffectiveDateIsInFuture);
     assertNotNull(pi.PatientVfcEffectiveDateIsInvalid);
@@ -442,6 +452,7 @@ public class TestPotentialIssues extends TestCase
     assertNotNull(pi.VaccinationBodyRouteIsIgnored);
     assertNotNull(pi.VaccinationBodyRouteIsInvalid);
     assertNotNull(pi.VaccinationBodyRouteIsInvalidForVaccineIndicated);
+    assertNotNull(pi.VaccinationBodyRouteIsInvalidForBodySiteIndicated);
     assertNotNull(pi.VaccinationBodyRouteIsMissing);
     assertNotNull(pi.VaccinationBodyRouteIsUnrecognized);
     assertNotNull(pi.VaccinationBodySiteIsDeprecated);
@@ -486,6 +497,13 @@ public class TestPotentialIssues extends TestCase
     assertNotNull(pi.VaccinationFacilityIdIsMissing);
     assertNotNull(pi.VaccinationFacilityIdIsUnrecognized);
     assertNotNull(pi.VaccinationFacilityNameIsMissing);
+    assertNotNull(pi.VaccinationFacilityTypeIsDeprecated);
+    assertNotNull(pi.VaccinationFacilityTypeIsIgnored);
+    assertNotNull(pi.VaccinationFacilityTypeIsInvalid);
+    assertNotNull(pi.VaccinationFacilityTypeIsMissing);
+    assertNotNull(pi.VaccinationFacilityTypeIsUnrecognized);
+    assertNotNull(pi.VaccinationFacilityTypeIsValuedAsPublic);
+    assertNotNull(pi.VaccinationFacilityTypeIsValuedAsPrivate);
     assertNotNull(pi.VaccinationFillerOrderNumberIsDeprecated);
     assertNotNull(pi.VaccinationFillerOrderNumberIsIgnored);
     assertNotNull(pi.VaccinationFillerOrderNumberIsInvalid);
@@ -591,6 +609,21 @@ public class TestPotentialIssues extends TestCase
     assertNotNull(pi.VaccinationSystemEntryTimeIsInFuture);
     assertNotNull(pi.VaccinationSystemEntryTimeIsInvalid);
     assertNotNull(pi.VaccinationSystemEntryTimeIsMissing);
+    assertNotNull(pi.VaccinationTradeNameIsDeprecated);
+    assertNotNull(pi.VaccinationTradeNameIsIgnored);
+    assertNotNull(pi.VaccinationTradeNameIsInvalid);
+    assertNotNull(pi.VaccinationTradeNameIsMissing);
+    assertNotNull(pi.VaccinationTradeNameIsUnrecognized);
+    assertNotNull(pi.VaccinationTradeNameAndVaccineAreInconsistent);
+    assertNotNull(pi.VaccinationTradeNameAndManufacturerAreInconsistent);
+    assertNotNull(pi.VaccinationValidityCodeIsInvalid);
+    assertNotNull(pi.VaccinationValidityCodeIsDeprecated);
+    assertNotNull(pi.VaccinationValidityCodeIsIgnored);
+    assertNotNull(pi.VaccinationValidityCodeIsMissing);
+    assertNotNull(pi.VaccinationValidityCodeIsUnrecognized);
+    assertNotNull(pi.VaccinationValidityCodeIsValuedAsValid);
+    assertNotNull(pi.VaccinationValidityCodeIsValuedAsInvalid);
+
 
 
   }

@@ -14,22 +14,26 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.sql.Clob;
+import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.hibernate.Query;
 import org.hibernate.Session;
+import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
+import org.openimmunizationsoftware.dqa.ProcessLocker;
 import org.openimmunizationsoftware.dqa.SoftwareVersion;
+import org.openimmunizationsoftware.dqa.db.model.Application;
 import org.openimmunizationsoftware.dqa.db.model.BatchActions;
 import org.openimmunizationsoftware.dqa.db.model.BatchCodeReceived;
 import org.openimmunizationsoftware.dqa.db.model.BatchIssues;
@@ -39,197 +43,177 @@ import org.openimmunizationsoftware.dqa.db.model.IssueAction;
 import org.openimmunizationsoftware.dqa.db.model.IssueFound;
 import org.openimmunizationsoftware.dqa.db.model.MessageBatch;
 import org.openimmunizationsoftware.dqa.db.model.MessageReceived;
+import org.openimmunizationsoftware.dqa.db.model.Organization;
 import org.openimmunizationsoftware.dqa.db.model.ReceiveQueue;
+import org.openimmunizationsoftware.dqa.db.model.ReportTemplate;
+import org.openimmunizationsoftware.dqa.db.model.Submission;
 import org.openimmunizationsoftware.dqa.db.model.SubmitStatus;
 import org.openimmunizationsoftware.dqa.db.model.SubmitterProfile;
 import org.openimmunizationsoftware.dqa.parse.VaccinationParserHL7;
-import org.openimmunizationsoftware.dqa.quality.AnalysisReport;
 import org.openimmunizationsoftware.dqa.quality.QualityCollector;
 import org.openimmunizationsoftware.dqa.quality.QualityReport;
 import org.openimmunizationsoftware.dqa.validate.Validator;
 
-public class FileImportProcessorCore
+public class SubmissionProcessor extends ManagerThread
 {
+
+  private SubmissionManager submissionManager = null;
+  private String submitterName = null;
 
   private SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss a");
   private PrintWriter processingOut = null;
-  private ManagerThread thread = null;
-  private QualityCollector qualityCollector = null;
-  private File ackFile;
-  private File reportFile;
-  private File errorsFile;
-  private File analysisDir;
-  private File logFile;
+  private File acceptedDir = null;
+  private File receiveDir = null;
+  private SubmitterProfile profile = null;
+  private VaccinationParserHL7 parser = null;
   private PrintWriter ackOut;
   private PrintWriter logOut;
   private PrintWriter reportOut;
   private PrintWriter errorsOut;
   private PrintWriter acceptedOut;
-  private SubmitterProfile profile = null;
-  private VaccinationParserHL7 parser = null;
-  private File acceptedDir = null;
-  private File receiveDir = null;
+  private QualityCollector qualityCollector = null;
 
-  public File getLogFile()
-  {
-    return logFile;
+  protected SubmissionProcessor(String submitterName, SubmissionManager fileImportManager) {
+    super("Submission Processor for " + submitterName);
+    this.submissionManager = fileImportManager;
+    this.submitterName = submitterName;
   }
 
-  public File getAckFile()
+  @Override
+  public void run()
   {
-    return ackFile;
+    try
+    {
+      internalLog.append("Looking for submissions to process \n");
+      KeyedSettingManager ksm = KeyedSettingManager.getKeyedSettingManager();
+      processingOut = new PrintWriter(System.out); // TODO find out what
+                                                           // to do with output
+      SessionFactory factory = OrganizationManager.getSessionFactory();
+      Session session = factory.openSession();
+      findProfile(submitterName, session);
+
+      Transaction tx = session.beginTransaction();
+      profile.initPotentialIssueStatus(session);
+      tx.commit();
+      Query query = session.createQuery("from Submission where submitterName = ? and submissionStatus = ? order by createdDate ASC");
+      query.setParameter(0, submitterName);
+      query.setParameter(1, Submission.SUBMISSION_STATUS_SUBMITTED);
+      List<Submission> submissionList = query.list();
+      procLog("Found " + submissionList.size() + " submissions to process");
+      internalLog.append("Found " + submissionList.size() + " submissions to process");
+      for (Submission submission : submissionList)
+      {
+        lookToProcessSubmission(session, submission);
+      }
+      session.close();
+    } catch (Exception e)
+    {
+      e.printStackTrace();
+      submissionManager.lastException = e;
+    } finally
+    {
+      // Processing is complete, now remove thread and complete
+      submissionManager.threads.remove(submitterName);
+    }
+
   }
 
-  public File getReportFile()
+  private void findProfile(String profileCode, Session session)
   {
-    return reportFile;
+    procLog("Looking for submitter profile");
+    Query query = session.createQuery("from SubmitterProfile where profileCode = ?");
+    query.setParameter(0, profileCode);
+    List<SubmitterProfile> submitterProfiles = query.list();
+    if (submitterProfiles.size() == 0)
+    {
+      procLog("Submitter profile not found, creating new one");
+      Transaction tx = session.beginTransaction();
+      Organization organization = new Organization();
+      organization.setOrgLabel(profileCode);
+      organization.setParentOrganization((Organization) session.get(Organization.class, 1));
+      profile = new SubmitterProfile();
+      profile.setProfileLabel("HL7 File");
+      profile.setProfileStatus(SubmitterProfile.PROFILE_STATUS_TEST);
+      profile.setOrganization(organization);
+      profile.setDataFormat(SubmitterProfile.DATA_FORMAT_HL7V2);
+      profile.setTransferPriority(SubmitterProfile.TRANSFER_PRIORITY_NORMAL);
+      profile.setProfileCode(profileCode);
+      profile.generateAccessKey();
+      query = session.createQuery("from Application where runThis = 'Y'");
+      List<Application> applicationList = query.list();
+      if (applicationList.size() > 0)
+      {
+        Application application = applicationList.get(0);
+        profile.setReportTemplate(application.getPrimaryReportTemplate());
+      } else
+      {
+        profile.setReportTemplate((ReportTemplate) session.get(ReportTemplate.class, 1));
+      }
+      session.save(organization);
+      session.save(profile);
+      organization.setPrimaryProfile(profile);
+      tx.commit();
+    } else
+    {
+      profile = submitterProfiles.get(0);
+      procLog("Using profile " + profile.getProfileId() + " '" + profile.getProfileLabel() + "' for organization '"
+          + profile.getOrganization().getOrgLabel() + "'");
+    }
+
   }
 
-  public File getErrorsFile()
+  private void lookToProcessSubmission(Session session, Submission submission) throws FileNotFoundException, IOException
   {
-    return errorsFile;
+    procLog("Looking at submission " + submission.getRequestName());
+    internalLog.append("Looking at submission " + submission.getRequestName());
+    // if (fileCanBeProcessed(inFile))
+    // {
+    procLog("Processing file " + submission.getRequestName());
+    internalLog.append("  + processing file... ");
+    try
+    {
+      ProcessLocker.lock(profile);
+      submission.setProfile(profile);
+      updateSubmissionStatus(session, submission, Submission.SUBMISSION_STATUS_PROCESSING);
+      ProcessorCore processorCore = new ProcessorCore(processingOut, this, profile, submission, session);
+      Clob requestContent = submission.getRequestContent();
+      BufferedReader reader = new BufferedReader(requestContent.getCharacterStream());
+      processorCore.processIn(session, submission.getRequestName(), reader);
+    } catch (SQLException sqle)
+    {
+      updateSubmissionStatus(session, submission, Submission.SUBMISSION_STATUS_ERROR);
+      throw new IOException("Unable to read clob", sqle);
+    } finally
+    {
+      ProcessLocker.unlock(profile);
+    }
+    // } else
+    // {
+    // procLog("File does not contain processable data or is not complete: " +
+    // filename);
+    // }
   }
 
-  public File getAnalysisDir()
+  private void updateSubmissionStatus(Session session, Submission submission, String submissionStatus)
   {
-    return analysisDir;
+    Transaction transaction = session.beginTransaction();
+    submission.setSubmissionStatus(submissionStatus);
+    submission.setSubmissionStatusDate(new Date());
+    transaction.commit();
   }
 
-  public PrintWriter getProcessingOut()
+ 
+
+  private void procLog(String message)
   {
-    return processingOut;
+    processingOut.println(sdf.format(new Date()) + " " + message);
+    processingOut.flush();
   }
 
-  public void setProcessingOut(PrintWriter processingOut)
+  private void processFile(Session session, String filename, File inFile) throws FileNotFoundException, IOException
   {
-    this.processingOut = processingOut;
-  }
-
-  public ManagerThread getThread()
-  {
-    return thread;
-  }
-
-  public void setThread(ManagerThread thread)
-  {
-    this.thread = thread;
-  }
-
-  public QualityCollector getQualityCollector()
-  {
-    return qualityCollector;
-  }
-
-  public void setQualityCollector(QualityCollector qualityCollector)
-  {
-    this.qualityCollector = qualityCollector;
-  }
-
-  public PrintWriter getAckOut()
-  {
-    return ackOut;
-  }
-
-  public void setAckOut(PrintWriter ackOut)
-  {
-    this.ackOut = ackOut;
-  }
-
-  public PrintWriter getLogOut()
-  {
-    return logOut;
-  }
-
-  public void setLogOut(PrintWriter logOut)
-  {
-    this.logOut = logOut;
-  }
-
-  public PrintWriter getReportOut()
-  {
-    return reportOut;
-  }
-
-  public void setReportOut(PrintWriter reportOut)
-  {
-    this.reportOut = reportOut;
-  }
-
-  public PrintWriter getErrorsOut()
-  {
-    return errorsOut;
-  }
-
-  public void setErrorsOut(PrintWriter errorsOut)
-  {
-    this.errorsOut = errorsOut;
-  }
-
-  public PrintWriter getAcceptedOut()
-  {
-    return acceptedOut;
-  }
-
-  public void setAcceptedOut(PrintWriter acceptedOut)
-  {
-    this.acceptedOut = acceptedOut;
-  }
-
-  public SubmitterProfile getProfile()
-  {
-    return profile;
-  }
-
-  public void setProfile(SubmitterProfile profile)
-  {
-    this.profile = profile;
-  }
-
-  public VaccinationParserHL7 getParser()
-  {
-    return parser;
-  }
-
-  public void setParser(VaccinationParserHL7 parser)
-  {
-    this.parser = parser;
-  }
-
-  public File getAcceptedDir()
-  {
-    return acceptedDir;
-  }
-
-  public void setAcceptedDir(File acceptedDir)
-  {
-    this.acceptedDir = acceptedDir;
-  }
-
-  public File getReceiveDir()
-  {
-    return receiveDir;
-  }
-
-  public void setReceiveDir(File receiveDir)
-  {
-    this.receiveDir = receiveDir;
-  }
-
-  public FileImportProcessorCore(PrintWriter processingOut, ManagerThread thread, SubmitterProfile profile, VaccinationParserHL7 parser,
-      File acceptedDir, File receiveDir) {
-    this.processingOut = processingOut;
-    this.thread = thread;
-    this.parser = parser;
-    this.profile = profile;
-    this.acceptedDir = acceptedDir;
-    this.receiveDir = receiveDir;
-  }
-
-  public void processFile(Session session, String filename, File inFile) throws FileNotFoundException, IOException
-  {
-    procLog("Starting file processing");
     Date receivedDate = determineReceivedDate(filename);
-    thread.setProgressStart(System.currentTimeMillis());
+    progressStart = System.currentTimeMillis();
     createMessageBatch(session);
     BufferedReader in = new BufferedReader(new FileReader(inFile));
     String line = readRealFirstLine(in);
@@ -237,7 +221,7 @@ public class FileImportProcessorCore
     {
       StringBuilder message = new StringBuilder();
       openOutputs(filename);
-      thread.setProgressCount(0);
+      progressCount = 0;
       do
       {
         line = line.trim();
@@ -247,6 +231,7 @@ public class FileImportProcessorCore
         {
           if (message.length() > 0)
           {
+            progressCount++;
             processMessage(message, profile, session, receivedDate);
           }
           message.setLength(0);
@@ -259,77 +244,18 @@ public class FileImportProcessorCore
       } while ((line = in.readLine()) != null);
       if (message.length() > 0)
       {
+        progressCount++;
         processMessage(message, profile, session, receivedDate);
       }
       printReport(inFile, session);
-      if (thread.getProgressCount() > 0)
+      if (progressCount > 0)
       {
-        procLog("Finished processing messages, saving submission batch");
         saveAndCloseBatch(session);
-      } else
-      {
-        procLog("No messages found to process.");
       }
       closeOutputs(acceptedOut);
-    } else
-    {
-      procLog("File does not start with HL7 content, not processing");
     }
     in.close();
     inFile.delete();
-  }
-
-  private void processMessage(StringBuilder message, SubmitterProfile profile, Session session, Date receivedDate)
-  {
-    thread.incProgressCount();
-    procLog("Processing message " + thread.getProgressCount());
-
-    Transaction tx = session.beginTransaction();
-    try
-    {
-      MessageReceived messageReceived = new MessageReceived();
-      messageReceived.setReceivedDate(receivedDate);
-      messageReceived.setProfile(profile);
-      messageReceived.setRequestText(message.toString());
-      parser.createVaccinationUpdateMessage(messageReceived);
-      if (!messageReceived.hasErrors())
-      {
-        Validator validator = new Validator(profile, session);
-        validator.validateVaccinationUpdateMessage(messageReceived, qualityCollector);
-      }
-      IssueAction issueAction = determineIssueAction(messageReceived);
-      messageReceived.setIssueAction(issueAction);
-      qualityCollector.registerProcessedMessage(messageReceived);
-
-      String ackMessage = parser.makeAckMessage(messageReceived);
-      messageReceived.setResponseText(ackMessage);
-      MessageReceivedManager.saveMessageReceived(profile, messageReceived, session);
-      saveInQueue(session, messageReceived);
-      // profile.saveCodesReceived(session);
-      ackOut.print(ackMessage);
-      printLogDetails(message, messageReceived, logOut, false);
-      if (issueAction.isError())
-      {
-        printLogDetails(message, messageReceived, errorsOut, true);
-        procLog(" + REJECTED ");
-      }
-
-      tx.commit();
-    } catch (Throwable exception)
-    {
-      procLog(" + EXCEPTION: " + exception.getMessage());
-      exception.printStackTrace();
-      tx.rollback();
-      String ackMessage = "MSH|^~\\&|||||201105231008000||ACK^|201105231008000|P|2.3.1|\r" + "MSA|AE|TODO|Exception occurred: "
-          + exception.getMessage() + "|\r";
-      ackOut.print(ackMessage);
-      exception.printStackTrace(processingOut);
-      exception.printStackTrace(logOut);
-      exception.printStackTrace(errorsOut);
-      exception.printStackTrace(reportOut);
-    }
-    session.flush();
-    session.clear();
   }
 
   private Date determineReceivedDate(String filename)
@@ -376,74 +302,6 @@ public class FileImportProcessorCore
     return receivedDate;
   }
 
-  private void createMessageBatch(Session session)
-  {
-    Transaction tx = session.beginTransaction();
-    qualityCollector = new QualityCollector("File Import", BatchType.SUBMISSION, profile);
-    session.save(qualityCollector.getMessageBatch());
-    tx.commit();
-  }
-
-  /**
-   * Reads the first lines of the file until it comes to a non empty line. This
-   * is to handle situations where the first few lines are empty and the HL7
-   * message does not immediately start.
-   * 
-   * @param in
-   * @return
-   * @throws IOException
-   */
-  private String readRealFirstLine(BufferedReader in) throws IOException
-  {
-    String line = null;
-    while ((line = in.readLine()) != null)
-    {
-      line = line.trim();
-      if (line.length() > 0)
-      {
-        break;
-      }
-    }
-    return line;
-  }
-
-  private void procLog(String message)
-  {
-    processingOut.println(sdf.format(new Date()) + " " + message);
-    processingOut.flush();
-  }
-
-  private void openOutputs(String filename) throws IOException
-  {
-    File outFile = new File(acceptedDir, filename);
-    acceptedOut = new PrintWriter(new FileWriter(outFile, true));
-    ackFile = new File(receiveDir, filename + ".ack.hl7");
-    logFile = new File(receiveDir, filename + ".log.txt");
-    reportFile = new File(receiveDir, filename + ".report.html");
-    errorsFile = new File(receiveDir, filename + ".errors.txt");
-    analysisDir = new File(receiveDir, filename + ".analysis");
-    ackOut = new PrintWriter(new FileWriter(ackFile));
-    logOut = new PrintWriter(new FileWriter(logFile));
-    reportOut = new PrintWriter(new FileWriter(reportFile));
-    errorsOut = new PrintWriter(new FileWriter(errorsFile));
-  }
-
-  private void printReport(File inFile, Session session) throws IOException 
-  {
-    procLog("Creating DQA Report");
-    Transaction tx = session.beginTransaction();
-    qualityCollector.score();
-    QualityReport qualityReport = new QualityReport(qualityCollector, profile, session, reportOut);
-    qualityReport.setFilename(inFile.getName());
-    qualityReport.printReport();
-    procLog("Creating Analysis Report");
-    AnalysisReport analysisReport = new AnalysisReport(qualityCollector, session, profile, analysisDir);
-    analysisReport.setFilename(inFile.getName());
-    analysisReport.printReport();
-    tx.commit();
-    procLog("Finished creating reports");
-  }
-
   private void saveAndCloseBatch(Session session)
   {
     qualityCollector.close();
@@ -471,14 +329,65 @@ public class FileImportProcessorCore
     tx.commit();
   }
 
+  private void createMessageBatch(Session session)
+  {
+    Transaction tx = session.beginTransaction();
+    qualityCollector = new QualityCollector("File Import", BatchType.SUBMISSION, profile);
+    session.save(qualityCollector.getMessageBatch());
+    tx.commit();
+  }
+
+  private void printReport(File inFile, Session session) throws IOException
+  {
+    Transaction tx = session.beginTransaction();
+    qualityCollector.score();
+    QualityReport qualityReport = new QualityReport(qualityCollector, profile, session, reportOut);
+    qualityReport.setFilename(inFile.getName());
+    qualityReport.printReport();
+    tx.commit();
+  }
+
+  /**
+   * Reads the first lines of the file until it comes to a non empty line. This
+   * is to handle situations where the first few lines are empty and the HL7
+   * message does not immediately start.
+   * 
+   * @param in
+   * @return
+   * @throws IOException
+   */
+  private String readRealFirstLine(BufferedReader in) throws IOException
+  {
+    String line = null;
+    while ((line = in.readLine()) != null)
+    {
+      line = line.trim();
+      if (line.length() > 0)
+      {
+        break;
+      }
+    }
+    return line;
+  }
+
+  private void openOutputs(String filename) throws IOException
+  {
+    File outFile = new File(acceptedDir, filename);
+    acceptedOut = new PrintWriter(new FileWriter(outFile, true));
+    ackOut = new PrintWriter(new FileWriter(new File(receiveDir, filename + ".ack.hl7")));
+    logOut = new PrintWriter(new FileWriter(new File(receiveDir, filename + ".log.txt")));
+    reportOut = new PrintWriter(new FileWriter(new File(receiveDir, filename + ".report.html")));
+    errorsOut = new PrintWriter(new FileWriter(new File(receiveDir, filename + ".errors.txt")));
+  }
+
   private void closeOutputs(PrintWriter acceptedOut)
   {
     long progressEnd = System.currentTimeMillis();
     logOut.println("Processing Complete");
-    logOut.println("Start Time:       " + sdf.format(new Date(thread.getProgressStart())));
+    logOut.println("Start Time:       " + sdf.format(new Date(progressStart)));
     logOut.println("End Time:         " + sdf.format(new Date(progressEnd)));
-    logOut.println("Message Count:    " + thread.getProgressCount());
-    logOut.println("Message/Second:   " + ((float) thread.getProgressCount()) / ((progressEnd - thread.getProgressStart()) / 1000.0));
+    logOut.println("Message Count:    " + progressCount);
+    logOut.println("Message/Second:   " + ((float) progressCount) / ((progressEnd - progressStart) / 1000.0));
     logOut.println("Software Label:   " + KeyedSettingManager.getApplication().getApplicationLabel());
     logOut.println("Software Type:    " + KeyedSettingManager.getApplication().getApplicationType());
     logOut.println("Software Version: " + SoftwareVersion.VENDOR + " " + SoftwareVersion.PRODUCT + " " + SoftwareVersion.VERSION + " "
@@ -488,8 +397,55 @@ public class FileImportProcessorCore
     logOut.close();
     reportOut.close();
     errorsOut.close();
-    thread.setProgressStart(0);
-    thread.setProgressEnd(0);
+    progressStart = 0;
+    progressCount = 0;
+  }
+
+  private void processMessage(StringBuilder message, SubmitterProfile profile, Session session, Date receivedDate)
+  {
+    Transaction tx = session.beginTransaction();
+    try
+    {
+      MessageReceived messageReceived = new MessageReceived();
+      messageReceived.setReceivedDate(receivedDate);
+      messageReceived.setProfile(profile);
+      messageReceived.setRequestText(message.toString());
+
+      parser.createVaccinationUpdateMessage(messageReceived);
+      if (!messageReceived.hasErrors())
+      {
+        Validator validator = new Validator(profile, session);
+        validator.validateVaccinationUpdateMessage(messageReceived, qualityCollector);
+      }
+      IssueAction issueAction = determineIssueAction(messageReceived);
+      messageReceived.setIssueAction(issueAction);
+      qualityCollector.registerProcessedMessage(messageReceived);
+
+      String ackMessage = parser.makeAckMessage(messageReceived);
+      messageReceived.setResponseText(ackMessage);
+      MessageReceivedManager.saveMessageReceived(profile, messageReceived, session);
+      saveInQueue(session, messageReceived);
+      // profile.saveCodesReceived(session);
+      ackOut.print(ackMessage);
+      printLogDetails(message, messageReceived, logOut, false);
+      if (issueAction.isError())
+      {
+        printLogDetails(message, messageReceived, errorsOut, true);
+      }
+      tx.commit();
+    } catch (Throwable exception)
+    {
+      tx.rollback();
+      String ackMessage = "MSH|^~\\&|||||201105231008000||ACK^|201105231008000|P|2.3.1|\r" + "MSA|AE|TODO|Exception occurred: "
+          + exception.getMessage() + "|\r";
+      ackOut.print(ackMessage);
+      exception.printStackTrace(processingOut);
+      exception.printStackTrace(logOut);
+      exception.printStackTrace(errorsOut);
+      exception.printStackTrace(reportOut);
+    }
+    session.flush();
+    session.clear();
   }
 
   private IssueAction determineIssueAction(MessageReceived messageReceived)
@@ -525,7 +481,7 @@ public class FileImportProcessorCore
   {
     try
     {
-      out.println("Message " + thread.getProgressCount());
+      out.println("Message " + progressCount);
       out.println(message);
       List<IssueFound> issuesFound = messageReceived.getIssuesFound();
       boolean first = true;
@@ -570,10 +526,9 @@ public class FileImportProcessorCore
       if (printDetails)
       {
         out.println("Message Data: ");
-        printBean(out, messageReceived, "  ", new HashSet<Object>());
+        printBean(out, messageReceived, "  ");
       }
-      out.format("Current processing speed: %.2f messages/second ",
-          ((float) thread.getProgressCount()) / ((System.currentTimeMillis() - thread.getProgressStart()) / 1000.0));
+      out.format("Current processing speed: %.2f messages/second", ((float) progressCount) / ((System.currentTimeMillis() - progressStart) / 1000.0));
 
       out.println();
       out.println();
@@ -583,16 +538,10 @@ public class FileImportProcessorCore
     }
   }
 
-  private static List<String> printBean(PrintWriter out, Object object, String indent, Set<Object> objectsPrinted) throws IllegalAccessException,
-      InvocationTargetException
+  private static List<String> printBean(PrintWriter out, Object object, String indent) throws IllegalAccessException, InvocationTargetException
   {
     List<String> thisPrinted = new ArrayList<String>();
     List<String> subPrinted = new ArrayList<String>();
-    if (objectsPrinted.contains(object))
-    {
-      return thisPrinted;
-    }
-    objectsPrinted.add(object);
     Method[] methods = object.getClass().getMethods();
     Arrays.sort(methods, new Comparator<Method>() {
       public int compare(Method o1, Method o2)
@@ -640,13 +589,13 @@ public class FileImportProcessorCore
             out.print(fieldName);
             out.print(" #");
             out.println(i + 1);
-            printBean(out, list.get(i), indent + "  ", objectsPrinted);
+            printBean(out, list.get(i), indent + "  ");
           }
         } else
         {
           out.print(indent);
           out.println(fieldName);
-          List<String> returnPrints = printBean(out, returnValue, indent + "  ", objectsPrinted);
+          List<String> returnPrints = printBean(out, returnValue, indent + "  ");
           for (String returnPrint : returnPrints)
           {
             subPrinted.add(fieldName + returnPrint);

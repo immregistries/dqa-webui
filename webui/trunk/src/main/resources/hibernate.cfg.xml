@@ -44,6 +44,8 @@
     <mapping resource="org/openimmunizationsoftware/dqa/db/model/ReportType.hbm.xml"/>
     <mapping resource="org/openimmunizationsoftware/dqa/db/model/ReportVaccineGroup.hbm.xml"/>
     <mapping resource="org/openimmunizationsoftware/dqa/db/model/ReceiveQueue.hbm.xml"/> 
+    <mapping resource="org/openimmunizationsoftware/dqa/db/model/Submission.hbm.xml"/>  
+    <mapping resource="org/openimmunizationsoftware/dqa/db/model/SubmissionAnalysis.hbm.xml"/>  
     <mapping resource="org/openimmunizationsoftware/dqa/db/model/SubmitStatus.hbm.xml"/>  
     <mapping resource="org/openimmunizationsoftware/dqa/db/model/SubmitterProfile.hbm.xml"/>
     <mapping resource="org/openimmunizationsoftware/dqa/db/model/UserAccount.hbm.xml"/>
