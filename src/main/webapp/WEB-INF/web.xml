@@ -40,6 +40,10 @@
     <servlet-name>ValidationDocumentationServlet</servlet-name>
     <servlet-class>org.openimmunizationsoftware.dqa.web.servlet.ValidationDocumentationServlet</servlet-class>
   </servlet>
+  <servlet>
+    <servlet-name>UploadSubmissionServlet</servlet-name>
+    <servlet-class>org.openimmunizationsoftware.dqa.web.servlet.UploadSubmissionServlet</servlet-class>
+  </servlet>
 <!-- 
   <servlet>
     <servlet-name>UploadDataServlet</servlet-name>
@@ -83,6 +87,7 @@
 		<servlet-name>InServlet</servlet-name>
 		<url-pattern>/in</url-pattern>
 	</servlet-mapping>
+  
   <servlet-mapping>
     <servlet-name>RemoteConnectionReportingServlet</servlet-name>
     <url-pattern>/remote</url-pattern>
@@ -100,6 +105,11 @@
   <servlet-mapping>
     <servlet-name>ValidationDocumentationServlet</servlet-name>
     <url-pattern>/validationDocumentation</url-pattern>
+  </servlet-mapping>
+  
+  <servlet-mapping>
+    <servlet-name>UploadSubmissionServlet</servlet-name>
+    <url-pattern>/uploadSubmission</url-pattern>
   </servlet-mapping>
 <!-- 
   <servlet-mapping>
