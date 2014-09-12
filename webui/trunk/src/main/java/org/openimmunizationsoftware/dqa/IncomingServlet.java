@@ -35,6 +35,7 @@ import org.openimmunizationsoftware.dqa.db.model.ReportTemplate;
 import org.openimmunizationsoftware.dqa.db.model.SubmitterProfile;
 import org.openimmunizationsoftware.dqa.db.model.UserAccount;
 import org.openimmunizationsoftware.dqa.manager.CodesReceived;
+import org.openimmunizationsoftware.dqa.manager.DatabaseCleanupManager;
 import org.openimmunizationsoftware.dqa.manager.FileImportManager;
 import org.openimmunizationsoftware.dqa.manager.OrganizationManager;
 import org.openimmunizationsoftware.dqa.manager.SubmissionManager;
@@ -54,6 +55,7 @@ public class IncomingServlet extends HttpServlet
   protected static SubmissionManager submissionManager = null;
   protected static WeeklyBatchManager weeklyBatchManager = null;
   protected static WeeklyExportManager weeklyExportManager = null;
+  protected static DatabaseCleanupManager databaseCleanupManager = null;
 
   @Override
   public void init() throws ServletException
@@ -62,6 +64,7 @@ public class IncomingServlet extends HttpServlet
     submissionManager = SubmissionManager.getSubmissionManager();
     weeklyBatchManager = WeeklyBatchManager.getWeeklyBatchManager();
     weeklyExportManager = WeeklyExportManager.getWeeklyExportManager();
+    databaseCleanupManager = DatabaseCleanupManager.getDatabaseCleanupManager();
   }
 
   @Override

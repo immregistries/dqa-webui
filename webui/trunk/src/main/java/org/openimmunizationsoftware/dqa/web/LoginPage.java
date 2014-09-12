@@ -1,6 +1,5 @@
 package org.openimmunizationsoftware.dqa.web;
 
-
 import java.util.List;
 
 import org.apache.wicket.markup.html.form.Form;
@@ -14,6 +13,7 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.openimmunizationsoftware.dqa.db.model.UserAccount;
+import org.openimmunizationsoftware.dqa.manager.UserAccountLoginManager;
 import org.openimmunizationsoftware.dqa.web.profile.ProfileSelectPage;
 
 /**
@@ -24,6 +24,7 @@ public class LoginPage extends DqaBasePage
 
   private static final long serialVersionUID = 1L;
   private Model<Integer> model = null;
+
   // TODO Add any page properties or variables here
 
   /**
@@ -40,35 +41,39 @@ public class LoginPage extends DqaBasePage
 
     add(new LoginForm("loginForm"));
   }
-  
+
   public class LoginForm extends Form<ValueMap>
   {
-    public LoginForm(final String id)
-    {
+    public LoginForm(final String id) {
       super(id, new CompoundPropertyModel<ValueMap>(new ValueMap()));
       setMarkupId("loginForm");
       add(new TextArea<String>("username").setType(String.class));
       add(new TextArea<String>("password").setType(String.class));
     }
+
     private String username = "";
     private String password = "";
+
     public String getUsername()
     {
       return username;
     }
+
     public void setUsername(String username)
     {
       this.username = username;
     }
+
     public String getPassword()
     {
       return password;
     }
+
     public void setPassword(String password)
     {
       this.password = password;
     }
-    
+
     @Override
     protected void onSubmit()
     {
@@ -83,13 +88,12 @@ public class LoginPage extends DqaBasePage
       Query query = session.createQuery("from UserAccount where username = ?");
       query.setString(0, username);
       List<UserAccount> userAccountList = query.list();
-      if (userAccountList.size() > 0 && userAccountList.get(0).getPassword().equalsIgnoreCase(password))
+      if (userAccountList.size() > 0 && UserAccountLoginManager.login(userAccountList.get(0), password, session))
       {
-          webSession.setUsername(username);
-          UserAccount userAccount = userAccountList.get(0);
-          webSession.setAdmin(userAccount.getAccountType().equals(UserAccount.ACCOUNT_TYPE_ADMIN));
-      }
-      else
+        webSession.setUsername(username);
+        UserAccount userAccount = userAccountList.get(0);
+        webSession.setAdmin(userAccount.getAccountType().equals(UserAccount.ACCOUNT_TYPE_ADMIN));
+      } else
       {
         webSession.setUsername(null);
         error("Unrecognized username or password");
@@ -98,7 +102,7 @@ public class LoginPage extends DqaBasePage
       tx.commit();
       setResponsePage(new ProfileSelectPage());
     }
-    
+
   }
-  
+
 }

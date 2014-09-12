@@ -24,31 +24,40 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
+import org.openimmunizationsoftware.dqa.db.model.KeyedSetting;
 import org.openimmunizationsoftware.dqa.db.model.RemoteConnection;
 import org.openimmunizationsoftware.dqa.db.model.RemoteFile;
 import org.openimmunizationsoftware.dqa.db.model.RemoteLog;
 import org.openimmunizationsoftware.dqa.db.model.RemoteStat;
+import org.openimmunizationsoftware.dqa.manager.KeyedSettingManager;
 import org.openimmunizationsoftware.dqa.manager.OrganizationManager;
 
 public class RemoteConnectionReportingServlet extends HttpServlet implements RemoteConnectionReportingInterface
 {
- 
 
   /**
    * 
    */
   private static final long serialVersionUID = 1L;
-  
+
   public static final long INACTIVE_TIMEOUT_WINDOW = 16 * 60 * 1000;
 
   @Override
   protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
   {
+    KeyedSettingManager ksm = KeyedSettingManager.getKeyedSettingManager();
+    if (!ksm.getKeyedValueBoolean(KeyedSetting.REMOTE_ENABLED, false))
+    {
+      resp.sendRedirect("ui/");
+      return;
+    }
+
     PrintWriter out = new PrintWriter(resp.getOutputStream());
     try
     {
       SessionFactory factory = OrganizationManager.getSessionFactory();
       Session session = factory.openSession();
+
       try
       {
         Transaction tx = session.beginTransaction();
@@ -284,6 +293,13 @@ public class RemoteConnectionReportingServlet extends HttpServlet implements Rem
     RemoteConnection remoteConnection = null;
     resp.setContentType("text/html");
     PrintWriter out = new PrintWriter(resp.getOutputStream());
+
+    KeyedSettingManager ksm = KeyedSettingManager.getKeyedSettingManager();
+    if (!ksm.getKeyedValueBoolean(KeyedSetting.REMOTE_ENABLED, false))
+    {
+      resp.sendRedirect("ui/");
+      return;
+    }
     try
     {
       out.println("<html>");

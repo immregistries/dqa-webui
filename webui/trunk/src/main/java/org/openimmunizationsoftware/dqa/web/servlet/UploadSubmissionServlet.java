@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URLEncoder;
 import java.util.Date;
 import java.util.List;
 
@@ -32,6 +33,7 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
+import org.openimmunizationsoftware.dqa.ConfigServlet;
 import org.openimmunizationsoftware.dqa.db.model.KeyedSetting;
 import org.openimmunizationsoftware.dqa.db.model.Organization;
 import org.openimmunizationsoftware.dqa.db.model.ReportTemplate;
@@ -213,7 +215,7 @@ public class UploadSubmissionServlet extends HttpServlet
             if (item.getFieldName().equals("profileCode"))
             {
               profileCode = item.getString();
-            } 
+            }
           } else
           {
             file = new File(uploadDirDest, item.getName());
@@ -225,7 +227,7 @@ public class UploadSubmissionServlet extends HttpServlet
       {
         throw new ServletException("Unable to upload file", ex);
       }
-      
+
       Transaction trans = session.beginTransaction();
       Submission submission = new Submission();
       submission.setSubmitterName(profileCode);
@@ -247,8 +249,10 @@ public class UploadSubmissionServlet extends HttpServlet
       session.update(submission);
       session.flush();
       trans.commit();
-      
+
       out.println("   <p>File uploaded for processing.</p>");
+      out.println("   <p><a href=\"config?menu=" + ConfigServlet.MENU_SUBMISSIONS + "&submitterName=" + URLEncoder.encode(profileCode, "UTF-8")
+          + "\">View Submissions</a></p>");
 
       out.println("  </body>");
       out.println("</html>");
