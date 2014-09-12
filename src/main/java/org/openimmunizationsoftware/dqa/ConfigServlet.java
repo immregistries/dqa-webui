@@ -172,13 +172,13 @@ public class ConfigServlet extends HttpServlet
         profile.setProfileStatus(profileStatus);
         profile.setTransferPriority(transferPriority);
         tx.commit();
-        
+
         boolean syncProfile = req.getParameter("syncProfile") != null;
         if (syncProfile)
         {
           SubmitterProfileManager.synchronizeToTemplate(profile, session);
         }
-        
+
         out.println("<p class=\"pass\">Profile saved</p>");
 
         menu = MENU_PROFILES;
@@ -280,15 +280,31 @@ public class ConfigServlet extends HttpServlet
         printClob(out, submission.getResponseReport());
       } else if (view.equals("analysis"))
       {
+        SubmissionAnalysis submissionAnalysis = null;
         String submissionAnalysisIdString = req.getParameter("submissionAnalysisId");
+        String analysisLabel = req.getParameter("analysisLabel");
+        if (analysisLabel != null)
+        {
+          Query query = session.createQuery("from SubmissionAnalysis where submission = ? and analysisLabel = ?");
+          query.setParameter(0, submission);
+          query.setParameter(1, analysisLabel);
+          List<SubmissionAnalysis> submissionAnalysisList = query.list();
+          if (submissionAnalysisList.size() > 0)
+          {
+            submissionAnalysis = submissionAnalysisList.get(0);
+          }
+        }
         if (submissionAnalysisIdString != null)
         {
           int submissionAnalysisId = Integer.parseInt(submissionAnalysisIdString);
-          SubmissionAnalysis submissionAnalysis = (SubmissionAnalysis) session.get(SubmissionAnalysis.class, submissionAnalysisId);
+          submissionAnalysis = (SubmissionAnalysis) session.get(SubmissionAnalysis.class, submissionAnalysisId);
+        }
+        if (submissionAnalysis != null)
+        {
           printClob(out, submissionAnalysis.getAnalysisContent());
         } else
         {
-          printClob(out, submission.getResponseAnalysis());
+          printClobForAnalysis(out, submission.getResponseAnalysis(), submissionId);
         }
       } else if (view.equals("request"))
       {
@@ -454,13 +470,13 @@ public class ConfigServlet extends HttpServlet
         out.println("            </select>");
         out.println("          </td>");
         out.println("        </tr>");
-        
+
         out.println("        </tr>");
         out.println("        <tr>");
         out.println("          <th>Synchronize</th>");
         out.println("          <td><input type=\"checkbox\" name=\"syncProfile\" value=\"true\"/></td>");
         out.println("        </tr>");
-        // 
+        //
         out.println("        <tr>");
         out.println("          <td colspan=\"2\" align=\"right\"><input type=\"submit\" name=\"action\" value=\"update profile\"/></td>");
         out.println("        </tr>");
@@ -984,13 +1000,30 @@ public class ConfigServlet extends HttpServlet
       int pos = 0;
       while ((line = reader.readLine()) != null)
       {
-        if ((pos = line.indexOf("href=\"Message 1")) > -1)
+        // <td><a class="tooltip" href="Message 1 Skipped.html">1</a></td>
+        if ((pos = line.indexOf("href=\"Message ")) > -1)
         {
           pos = pos + 6;
           out.print(line.substring(0, pos));
-          out.print("menu=" + MENU_SUBMISSIONS + "&submissionId=" + submissionId + "&submissionAnalysisId");
+          int endPos = line.indexOf("\"", pos);
+          if (endPos > pos)
+          {
+            String analysisLabel = line.substring(pos, endPos);
+            if (analysisLabel.endsWith(".html"))
+            {
+              analysisLabel = analysisLabel.substring(0, analysisLabel.length() - 5);
+            }
+            out.print("config?menu=" + MENU_SUBMISSIONS + "&view=analysis&submissionId=" + submissionId + "&analysisLabel="
+                + URLEncoder.encode(analysisLabel, "UTF-8"));
+            out.println(line.substring(endPos));
+          } else
+          {
+            out.println(line.substring(pos));
+          }
+        } else
+        {
+          out.println(line);
         }
-        out.println(line);
       }
       reader.close();
     } catch (SQLException sqle)
