@@ -843,20 +843,24 @@ public class ConfigServlet extends HttpServlet
           out.println("</table>");
           out.println("<h3>Request</h3>");
           printClobLimited(out, submission.getRequestContent());
+          out.println("<p><a href=\"" + link + "&view=request\" target=\"_blank\">View</a></p>");
           if (submission.getResponseContent() != null)
           {
             out.println("<h3>Response</h3>");
             printClobLimited(out, submission.getResponseContent());
+            out.println("<p><a href=\"" + link + "&view=response\" target=\"_blank\">View</a></p>");
           }
           if (submission.getResponseDetailLog() != null)
           {
             out.println("<h3>Log</h3>");
             printClobLimited(out, submission.getResponseDetailLog());
+            out.println("<p><a href=\"" + link + "&view=log\" target=\"_blank\">View</a></p>");
           }
           if (submission.getResponseDetailError() != null)
           {
             out.println("<h3>Error Log</h3>");
             printClobLimited(out, submission.getResponseDetailError());
+            out.println("<p><a href=\"" + link + "&view=error\" target=\"_blank\">View</a></p>");
           }
           if (submission.getResponseReport() != null)
           {
