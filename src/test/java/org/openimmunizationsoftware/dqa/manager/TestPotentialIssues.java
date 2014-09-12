@@ -178,12 +178,12 @@ public class TestPotentialIssues extends TestCase
     assertNotNull(pi.ObservationValueTypeIsInvalid);
     assertNotNull(pi.ObservationValueTypeIsMissing);
     assertNotNull(pi.ObservationValueTypeIsUnrecognized);
-    assertNotNull(pi.ObservationObservationIdentifierCodeIsDeprecated);
-    assertNotNull(pi.ObservationObservationIdentifierCodeIsIgnored);
-    assertNotNull(pi.ObservationObservationIdentifierCodeIsInvalid);
-    assertNotNull(pi.ObservationObservationIdentifierCodeIsMissing);
-    assertNotNull(pi.ObservationObservationIdentifierCodeIsUnrecognized);
-    assertNotNull(pi.ObservationObservationValueIsMissing);
+    assertNotNull(pi.ObservationIdentifierCodeIsDeprecated);
+    assertNotNull(pi.ObservationIdentifierCodeIsIgnored);
+    assertNotNull(pi.ObservationIdentifierCodeIsInvalid);
+    assertNotNull(pi.ObservationIdentifierCodeIsMissing);
+    assertNotNull(pi.ObservationIdentifierCodeIsUnrecognized);
+    assertNotNull(pi.ObservationValueIsMissing);
     assertNotNull(pi.ObservationDateTimeOfObservationIsMissing);
     assertNotNull(pi.ObservationDateTimeOfObservationIsInvalid);
     assertNotNull(pi.PatientAddressIsMissing);
@@ -623,6 +623,7 @@ public class TestPotentialIssues extends TestCase
     assertNotNull(pi.VaccinationValidityCodeIsUnrecognized);
     assertNotNull(pi.VaccinationValidityCodeIsValuedAsValid);
     assertNotNull(pi.VaccinationValidityCodeIsValuedAsInvalid);
+
 
 
 
