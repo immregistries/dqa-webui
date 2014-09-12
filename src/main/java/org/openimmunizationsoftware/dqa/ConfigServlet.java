@@ -44,6 +44,7 @@ import org.openimmunizationsoftware.dqa.manager.ManagerThread;
 import org.openimmunizationsoftware.dqa.manager.ManagerThreadMulti;
 import org.openimmunizationsoftware.dqa.manager.OrganizationManager;
 import org.openimmunizationsoftware.dqa.manager.ReloadManager;
+import org.openimmunizationsoftware.dqa.manager.SubmitterProfileManager;
 import org.openimmunizationsoftware.dqa.manager.UserAccountLoginManager;
 import org.openimmunizationsoftware.dqa.manager.WeeklyBatchManager;
 import org.openimmunizationsoftware.dqa.manager.WeeklyExportManager;
@@ -171,6 +172,13 @@ public class ConfigServlet extends HttpServlet
         profile.setProfileStatus(profileStatus);
         profile.setTransferPriority(transferPriority);
         tx.commit();
+        
+        boolean syncProfile = req.getParameter("syncProfile") != null;
+        if (syncProfile)
+        {
+          SubmitterProfileManager.synchronizeToTemplate(profile, session);
+        }
+        
         out.println("<p class=\"pass\">Profile saved</p>");
 
         menu = MENU_PROFILES;
@@ -445,6 +453,14 @@ public class ConfigServlet extends HttpServlet
         }
         out.println("            </select>");
         out.println("          </td>");
+        out.println("        </tr>");
+        
+        out.println("        </tr>");
+        out.println("        <tr>");
+        out.println("          <th>Synchronize</th>");
+        out.println("          <td><input type=\"checkbox\" name=\"syncProfile\" value=\"true\"/></td>");
+        out.println("        </tr>");
+        // 
         out.println("        <tr>");
         out.println("          <td colspan=\"2\" align=\"right\"><input type=\"submit\" name=\"action\" value=\"update profile\"/></td>");
         out.println("        </tr>");
