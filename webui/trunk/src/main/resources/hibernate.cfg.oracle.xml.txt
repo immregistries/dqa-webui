@@ -3,7 +3,7 @@
 <hibernate-configuration>
   <session-factory>
     <property name="hibernate.connection.driver_class">oracle.jdbc.driver.OracleDriver</property>
-    <property name="hibernate.connection.url">jdbc:oracle:thin:@localhost:1521:dqa</property>
+    <property name="hibernate.connection.url">jdbc:oracle:thin:@localhost:1521:orcl</property>
     <property name="hibernate.connection.username">dqa</property>
     <property name="hibernate.dialect">org.hibernate.dialect.Oracle10gDialect</property>
     <property name="connection.password">dqa4dev</property>
