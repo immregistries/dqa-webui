@@ -1,0 +1,661 @@
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        xmlns:dqa="http://dqaws.openimmunizationsoftware.org/dqa/schema" 
+	    elementFormDefault="qualified"
+        targetNamespace="http://dqaws.openimmunizationsoftware.org/dqa/schema">
+
+    <element name="Fault" type="dqa:FaultType"/>
+
+    <complexType name="SubmitMessageType">
+        <sequence>
+            <element name="profileCode" nillable="false" type="string"/>
+            <element name="profileLabel" nillable="true" type="string"/>
+            <element name="orgLocalCode" nillable="false" type="long"/>
+            <element name="messageRequest" nillable="false" type="string"/>
+            <element name="processMode" nillable="false" type="string"/>
+            <element name="batchInstruction" nillable="true" type="string"/>
+        </sequence>
+    </complexType>
+    <complexType name="SubmitMessageResultType">
+        <sequence>
+            <element name="messageResponse" nillable="false" type="string"/>
+            <element name="responseStatus" nillable="false" type="string"/>
+            <element name="responseText" nillable="false" type="string"/>
+            <element name="batchId" nillable="false" type="long"/>
+            <element name="receivedId" nillable="false" type="long"/>
+            <element name="hashId" nillable="false" type="string"/>
+            <element name="errorList" nillable="false" type="dqa:IssueListType"/>
+            <element name="warningList" nillable="false" type="dqa:IssueListType"/>
+            <element name="processReport" nillable="true" type="string"/>
+        </sequence>
+    </complexType>
+    <complexType name="IssueType">
+        <sequence>
+            <element name="issueId" nillable="false" type="long"/>
+            <element name="issueLabel" nillable="false" type="string"/>
+        </sequence>
+    </complexType>
+    <complexType name="IssueListType">
+        <sequence>
+            <element name="issueList" type="dqa:IssueType" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+
+<!--
+    <complexType name="GetBatchesType">
+        <sequence>
+            <element name="profileCode" nillable="false" type="string"/>
+            <element name="batchType" nillable="true" type="string"/>
+            <element name="startDate" nillable="true" type="string"/>
+            <element name="endDate" nillable="true" type="string"/>
+            <element name="submitCode" nillable="true" type="string"/>
+        </sequence>
+    </complexType>
+    <complexType name="GetBatchesResultType">
+        <sequence>
+            <element name="messageBatchList" nillable="false" type="dqa:MessageBatchListType"/>
+        </sequence>
+    </complexType>
+    <complexType name="MessageBatchListType">
+        <sequence>
+            <element name="messageBatchList" type="dqa:MessageBatchType" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <complexType name="MessageBatchType">
+        <sequence>
+            <element name="batchId" nillable="false" type="long"/>
+            <element name="batchTitle" nillable="false" type="string"/>
+            <element name="typeCode" nillable="false" type="string"/>
+            <element name="typeLabel" nillable="false" type="string"/>
+            <element name="startDate" nillable="false" type="string"/>
+            <element name="endDate" nillable="true" type="string"/>
+            <element name="submitCode" nillable="false" type="string"/>
+            <element name="submitLabel" nillable="false" type="string"/>
+            <element name="profileId" nillable="false" type="long"/>
+            <element name="profileCode" nillable="false" type="string"/>
+            <element name="overallScore" nillable="false" type="long"/>
+            <element name="messageCount" nillable="true" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="GetBatchDqaReportType">
+        <sequence>
+            <element name="batchId" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="GetBatchDqaReportResultType">
+        <sequence>
+            <element name="dqaReport" nillable="false" type="string"/>
+        </sequence>
+    </complexType>
+    <complexType name="CreateMessageBatchType">
+        <sequence>
+            <element name="profileId" nillable="false" type="long"/>
+            <element name="startDate" nillable="false" type="string"/>
+            <element name="endDate" nillable="false" type="string"/>
+            <element name="sourceSubmitCode" nillable="false" type="string"/>
+            <element name="sourceTypeCode" nillable="true" type="string"/>
+        </sequence>
+    </complexType>
+    <complexType name="CreateMessageBatchResultType">
+        <sequence>
+            <element name="batchId" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="UpdateSubmitterProfileType">
+        <sequence>
+            <element name="submitterProfileList" nillable="false" type="dqa:SubmitterProfileType"/>
+            <element name="autoCreate" nillable="true" type="string"/>
+        </sequence>
+    </complexType>
+    <complexType name="UpdateSubmitterProfileResultType">
+        <sequence>
+            <element name="profileId" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="GetSubmitterProfileType">
+        <sequence>
+            <element name="profileCode" nillable="false" type="string"/>
+            <element name="profileId" nillable="true" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="GetSubmitterProfileResultType">
+        <sequence>
+            <element name="submitterProfile" nillable="false" type="dqa:SubmitterProfileType"/>
+        </sequence>
+    </complexType>
+    <complexType name="SubmitterProfileType">
+        <sequence>
+            <element name="profileCode" nillable="false" type="string"/>
+            <element name="profileId" nillable="true" type="long"/>
+            <element name="profileLabel" nillable="false" type="string"/>
+            <element name="profileStatus" nillable="false" type="string"/>
+            <element name="orgLocalCode" nillable="false" type="long"/>
+            <element name="orgLocalLabel" nillable="true" type="string"/>
+            <element name="transferPriority" nillable="true" type="string"/>
+            <element name="accessKey" nillable="true" type="string"/>
+            <element name="templateId" nillable="true" type="long"/>
+        </sequence>
+    </complexType>
+    
+    <complexType name="GetReportTemplatesType">
+        <sequence>
+        </sequence>
+    </complexType>
+    <complexType name="GetReportTemplatesResultType">
+        <sequence>
+            <element name="templateList" nillable="false" type="dqa:ReportTemplatesListType"/>
+        </sequence>
+    </complexType>
+    <complexType name="ReportTemplatesListType">
+        <sequence>
+            <element name="reportTemplateList" type="dqa:ReportTemplateType" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <complexType name="ReportTemplateType">
+        <sequence>
+            <element name="templateId" nillable="false" type="long"/>
+            <element name="templateLabel" nillable="false" type="string"/>
+            <element name="applicationId" nillable="false" type="long"/>
+            <element name="applicationLabel" nillable="false" type="string"/>
+            <element name="reportTypeId" nillable="false" type="long"/>
+            <element name="reportTypeLabel" nillable="true" type="string"/>
+            <element name="baseProfileId" nillable="false" type="long"/>
+            <element name="baseProfileLabel" nillable="false" type="string"/>
+        </sequence>
+    </complexType>
+    
+    <complexType name="GetCodeReceivedListType">
+        <sequence>
+            <element name="profileId" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="GetCodeReceivedListResultType">
+        <sequence>
+            <element name="codeReceivedList" nillable="false" type="dqa:CodeReceivedListType"/>
+        </sequence>
+    </complexType>
+    <complexType name="CodeReceivedListType">
+        <sequence>
+            <element name="codeReceivedList" type="dqa:CodeReceivedType" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <complexType name="CodeReceivedType">
+        <sequence>
+            <element name="codeId" nillable="false" type="long"/>
+            <element name="codeLabel" nillable="false" type="string"/>
+            <element name="profileId" nillable="false" type="long"/>
+            <element name="tableId" nillable="false" type="long"/>
+            <element name="tableLabel" nillable="false" type="string"/>
+            <element name="receivedValue" nillable="false" type="string"/>
+            <element name="codeValue" nillable="false" type="string"/>
+            <element name="codeStatus" nillable="false" type="string"/>
+            <element name="codeLabel" nillable="false" type="string"/>
+            <element name="receivedCount" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="UpdateCodeReceivedType">
+        <sequence>
+            <element name="codeReceivedList" nillable="false" type="dqa:CodeReceivedSmallListType"/>
+        </sequence>
+    </complexType>
+    <complexType name="UpdateCodeReceivedResultType">
+        <sequence>
+        </sequence>
+    </complexType>
+    <complexType name="CodeReceivedSmallListType">
+        <sequence>
+            <element name="codeReceived" type="dqa:CodeReceivedSmallType" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <complexType name="CodeReceivedSmallType">
+        <sequence>
+            <element name="codeId" nillable="false" type="long"/>
+            <element name="codeValue" nillable="false" type="string"/>
+            <element name="codeStatus" nillable="false" type="string"/>
+            <element name="receivedCount" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="GetPotentialIssueStatusListType">
+        <sequence>
+            <element name="profileId" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="GetPotentialIssueStatusListResultType">
+        <sequence>
+            <element name="potentialIssueStatusList" nillable="false" type="dqa:PotentialIssueStatusListType"/>
+        </sequence>
+    </complexType>
+    <complexType name="PotentialIssueStatusListType">
+        <sequence>
+            <element name="potentialIssueStatusList" type="dqa:PotentialIssueStatusType" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <complexType name="PotentialIssueStatusType">
+        <sequence>
+            <element name="issueId" nillable="false" type="long"/>
+            <element name="issueLabel" nillable="false" type="string"/>
+            <element name="issueDescription" nillable="false" type="string"/>
+            <element name="changePriority" nillable="false" type="string"/>
+            <element name="profileId" nillable="false" type="long"/>
+            <element name="actionCode" nillable="false" type="string"/>
+            <element name="actionLabel" nillable="false" type="string"/>
+            <element name="expectMin" nillable="false" type="long"/>
+            <element name="expectMax" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="UpdatePotentialIssueStatusType">
+        <sequence>
+            <element name="issueId" nillable="false" type="long"/>
+            <element name="actionCode" nillable="false" type="string"/>
+            <element name="expectMin" nillable="false" type="long"/>
+            <element name="expectMax" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="UpdatePotentialIssueStatusResultType">
+        <sequence>
+        </sequence>
+    </complexType>
+
+    <complexType name="GetBatchType">
+        <sequence>
+            <element name="batchId" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="GetBatchResultType">
+        <sequence>
+            <element name="messageBatch" nillable="false" type="dqa:MessageBatchType"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="GetBatchIssueListType">
+        <sequence>
+            <element name="batchId" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="GetBatchIssueListResultType">
+        <sequence>
+            <element name="batchIssueList" nillable="false" type="dqa:BatchIssueListType"/>
+        </sequence>
+    </complexType>
+    <complexType name="BatchIssueListType">
+        <sequence>
+            <element name="batchIssuesList" type="dqa:BatchIssueType" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <complexType name="BatchIssueType">
+        <sequence>
+            <element name="batchIssueId" nillable="false" type="long"/>
+            <element name="batchId" nillable="false" type="long"/>
+            <element name="issueId" nillable="false" type="long"/>
+            <element name="issueText" nillable="false" type="string"/>
+            <element name="issueCount" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="GetBatchReportType">
+        <sequence>
+            <element name="batchId" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="GetBatchReportResultType">
+        <sequence>
+            <element name="batchReport" nillable="false" type="dqa:BatchReportType"/>
+        </sequence>
+    </complexType>
+    <complexType name="BatchReportType">
+        <sequence>
+            <element name="reportId" nillable="false" type="long"/>
+            <element name="batchId" nillable="false" type="long"/>
+            <element name="compPatientScore" nillable="false" type="long"/>
+            <element name="compScore" nillable="false" type="long"/>
+            <element name="compVaccinationScore" nillable="false" type="long"/>
+            <element name="messageCount" nillable="false" type="long"/>
+            <element name="messageWithAdminCount" nillable="false" type="long"/>
+            <element name="nextOfKinCount" nillable="false" type="long"/>
+            <element name="overAllScore" nillable="false" type="long"/>
+            <element name="patientCount" nillable="false" type="long"/>
+            <element name="patientUnderageCount" nillable="false" type="long"/>
+            <element name="qualErrorScore" nillable="false" type="long"/>
+            <element name="qualScore" nillable="false" type="long"/>
+            <element name="qualWarnScore" nillable="false" type="long"/>
+            <element name="timeAverage" nillable="false" type="float"/>
+            <element name="timeCountEarly" nillable="false" type="long"/>
+            <element name="timeCountLate" nillable="false" type="long"/>
+            <element name="timeCountOntime" nillable="false" type="long"/>
+            <element name="timeCountOldData" nillable="false" type="long"/>
+            <element name="timeCountVeryLate" nillable="false" type="long"/>
+            <element name="timeDateFirst" nillable="false" type="string"/>
+            <element name="timeDateLast" nillable="false" type="string"/>
+            <element name="timeScore" nillable="false" type="long"/>
+            <element name="timeScoreEarly" nillable="false" type="long"/>
+            <element name="timeScoreLate" nillable="false" type="long"/>
+            <element name="timeScoreOntime" nillable="false" type="long"/>
+            <element name="timeScoreVeryLate" nillable="false" type="long"/>
+            <element name="vaccAdminCount" nillable="false" type="long"/>
+            <element name="vaccDeleteCount" nillable="false" type="long"/>
+            <element name="vaccHistoricalCount" nillable="false" type="long"/>
+            <element name="vaccNotAdminCount" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="GetBatchActionListType">
+        <sequence>
+            <element name="batchId" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="GetBatchActionListResultType">
+        <sequence>
+            <element name="batchActionList" nillable="false" type="dqa:BatchActionListType"/>
+        </sequence>
+    </complexType>
+    <complexType name="BatchActionListType">
+        <sequence>
+            <element name="batchActionsList" type="dqa:BatchActionType" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <complexType name="BatchActionType">
+        <sequence>
+            <element name="batchActionId" nillable="false" type="long"/>
+            <element name="batchId" nillable="false" type="long"/>
+            <element name="actionCode" nillable="false" type="string"/>
+            <element name="actionLabel" nillable="false" type="string"/>
+            <element name="actionCount" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="GetBatchVaccineCvxListType">
+        <sequence>
+            <element name="batchId" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="GetBatchVaccineCvxListResultType">
+        <sequence>
+            <element name="batchVaccineCvxList" nillable="false" type="dqa:BatchVaccineCvxListType"/>
+        </sequence>
+    </complexType>
+    <complexType name="BatchVaccineCvxListType">
+        <sequence>
+            <element name="batchVaccineCvxList" type="dqa:BatchVaccineCvxType" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <complexType name="BatchVaccineCvxType">
+        <sequence>
+            <element name="batchVaccineCvxId" nillable="false" type="long"/>
+            <element name="batchId" nillable="false" type="long"/>
+            <element name="cvxCode" nillable="false" type="string"/>
+            <element name="cvxLabel" nillable="false" type="string"/>
+            <element name="receivedCount" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="GetBatchCodeReceivedListType">
+        <sequence>
+            <element name="batchId" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="GetBatchCodeReceivedListResultType">
+        <sequence>
+            <element name="batchCodeReceivedList" nillable="false" type="dqa:BatchCodeReceivedListType"/>
+        </sequence>
+    </complexType>
+    <complexType name="BatchCodeReceivedListType">
+        <sequence>
+            <element name="batchCodeReceivedList" type="dqa:BatchCodeReceivedType" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <complexType name="BatchCodeReceivedType">
+        <sequence>
+            <element name="batchCodeReceivedId" nillable="false" type="long"/>
+            <element name="batchId" nillable="false" type="long"/>
+            <element name="codeId" nillable="false" type="string"/>
+            <element name="codeLabel" nillable="false" type="string"/>
+            <element name="tableId" nillable="false" type="long"/>
+            <element name="tableLabel" nillable="false" type="string"/>
+            <element name="receivedValue" nillable="false" type="string"/>
+            <element name="codeValue" nillable="false" type="string"/>
+            <element name="codeStatus" nillable="false" type="string"/>
+            <element name="codeLabel" nillable="false" type="string"/>
+            <element name="receivedCount" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="GetMessageReceivedListType">
+        <sequence>
+            <element name="batchId" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="GetMessageReceivedListResultType">
+        <sequence>
+            <element name="messageReceivedList" nillable="false" type="dqa:MessageReceivedListType"/>
+        </sequence>
+    </complexType>
+    <complexType name="MessageReceivedListType">
+        <sequence>
+            <element name="messageReceivedList" type="dqa:MessageReceivedType" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <complexType name="MessageReceivedType">
+        <sequence>
+            <element name="receivedId" nillable="false" type="long"/>
+            <element name="profileId" nillable="false" type="long"/>
+            <element name="receivedDate" nillable="false" type="string"/>
+            <element name="actionCode" nillable="false" type="string"/>
+            <element name="actionLabel" nillable="false" type="string"/>
+            <element name="submitCode" nillable="false" type="string"/>
+            <element name="submitLabel" nillable="false" type="string"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="GetMessageReceivedDetailsType">
+        <sequence>
+            <element name="receivedId" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="GetMessageReceivedDetailsResultType">
+        <sequence>
+            <element name="messageReceivedDetails" nillable="false" type="dqa:MessageReceivedDetailsType"/>
+            <element name="issueFoundList" nillable="false" type="dqa:IssueFoundListType"/>
+        </sequence>
+    </complexType>
+    <complexType name="MessageReceivedDetailsType">
+        <sequence>
+            <element name="receivedId" nillable="false" type="long"/>
+            <element name="profileId" nillable="false" type="long"/>
+            <element name="receivedDate" nillable="false" type="string"/>
+            <element name="actionCode" nillable="false" type="string"/>
+            <element name="actionLabel" nillable="false" type="string"/>
+            <element name="submitCode" nillable="false" type="string"/>
+            <element name="submitLabel" nillable="false" type="string"/>
+            <element name="requestText" nillable="false" type="string"/>
+            <element name="responseText" nillable="false" type="string"/>
+        </sequence>
+    </complexType>
+    <complexType name="IssueFoundListType">
+        <sequence>
+            <element name="issueFoundList" type="dqa:IssueFoundType" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <complexType name="IssueFoundType">
+        <sequence>
+            <element name="issueFoundId" nillable="false" type="long"/>
+            <element name="issueId" nillable="false" type="long"/>
+            <element name="issueLabel" nillable="false" type="string"/>
+            <element name="positionId" nillable="false" type="long"/>
+            <element name="actionCode" nillable="false" type="string"/>
+            <element name="actionLabel" nillable="false" type="string"/>
+            <element name="codeId" nillable="false" type="long"/>
+            <element name="codeLabel" nillable="false" type="string"/>
+            <element name="tableId" nillable="false" type="long"/>
+            <element name="tableLabel" nillable="false" type="string"/>
+            <element name="receivedValue" nillable="false" type="string"/>
+            <element name="codeValue" nillable="false" type="string"/>
+            <element name="codeStatus" nillable="false" type="long"/>
+            <element name="codeLabel" nillable="false" type="string"/>
+            <element name="receivedCount" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="GetPatientType">
+        <sequence>
+            <element name="receivedId" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="GetPatientResultType">
+        <sequence>
+            <element name="patient" nillable="false" type="dqa:PatientType"/>
+        </sequence>
+    </complexType>
+    <complexType name="PatientType">
+        <sequence>
+            <element name="patientId" nillable="false" type="long"/>
+            <element name="skipped" nillable="false" type="string"/>
+            <element name="addressCity" nillable="false" type="string"/>
+            <element name="addressCountry" nillable="false" type="string"/>
+            <element name="addressCountyParish" nillable="false" type="string"/>
+            <element name="addressState" nillable="false" type="string"/>
+            <element name="addressStreet" nillable="false" type="string"/>
+            <element name="addressStreet2" nillable="false" type="string"/>
+            <element name="addressType" nillable="false" type="string"/>
+            <element name="addressZip" nillable="false" type="string"/>
+            <element name="aliasFirst" nillable="false" type="string"/>
+            <element name="aliasLast" nillable="false" type="string"/>
+            <element name="aliasMiddle" nillable="false" type="string"/>
+            <element name="aliasPrefix" nillable="false" type="string"/>
+            <element name="aliasSuffix" nillable="false" type="string"/>
+            <element name="aliasTypeCode" nillable="false" type="long"/>
+            <element name="birthDate" nillable="false" type="string"/>
+            <element name="birthMultiple" nillable="false" type="string"/>
+            <element name="birthOrder" nillable="false" type="string"/>
+            <element name="birthPlace" nillable="false" type="string"/>
+            <element name="deathIndicator" nillable="false" type="string"/>
+            <element name="ethincityCode" nillable="false" type="string"/>
+            <element name="facilityId" nillable="false" type="long"/>
+            <element name="facilityName" nillable="false" type="string"/>
+            <element name="financialEligibility" nillable="false" type="string"/>
+            <element name="idMedicaid" nillable="false" type="string"/>
+            <element name="idSsn" nillable="false" type="string"/>
+            <element name="idSubmitterAssignAuth" nillable="false" type="string"/>
+            <element name="idSubmitterNumber" nillable="false" type="string"/>
+            <element name="idSubmitterTypeCode" nillable="false" type="string"/>
+            <element name="motherMaidenName" nillable="false" type="string"/>
+            <element name="nameFirst" nillable="false" type="string"/>
+            <element name="nameLast" nillable="false" type="string"/>
+            <element name="nameMiddle" nillable="false" type="string"/>
+            <element name="namePrefix" nillable="false" type="string"/>
+            <element name="nameSuffix" nillable="false" type="string"/>
+            <element name="nameTypeCode" nillable="false" type="string"/>
+            <element name="phoneNumber" nillable="false" type="string"/>
+            <element name="physianNameFirst" nillable="false" type="string"/>
+            <element name="physianNameLast" nillable="false" type="string"/>
+            <element name="physicianNumber" nillable="false" type="string"/>
+            <element name="primaryLanguageCode" nillable="false" type="string"/>
+            <element name="protectionCode" nillable="false" type="string"/>
+            <element name="publicityCode" nillable="false" type="string"/>
+            <element name="raceCode" nillable="false" type="string"/>
+            <element name="registryStatus" nillable="false" type="string"/>
+            <element name="sexCode" nillable="false" type="string"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="GetVaccinationListType">
+        <sequence>
+            <element name="receivedId" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="GetVaccinationListResultType">
+        <sequence>
+            <element name="vaccinationList" nillable="false" type="dqa:VaccinationListType"/>
+        </sequence>
+    </complexType>
+    <complexType name="VaccinationListType">
+        <sequence>
+            <element name="vaccinationList" type="dqa:VaccinationType" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <complexType name="VaccinationType">
+        <sequence>
+            <element name="vaccinationId" nillable="false" type="long"/>
+            <element name="positionId" nillable="false" type="long"/>
+            <element name="skipped" nillable="false" type="string"/>
+            <element name="adminCodeCpt" nillable="false" type="string"/>
+            <element name="adminCodeCvx" nillable="false" type="string"/>
+            <element name="adminDate" nillable="false" type="string"/>
+            <element name="amount" nillable="false" type="string"/>
+            <element name="amountUnitCode" nillable="false" type="string"/>
+            <element name="bodyRouteCode" nillable="false" type="string"/>
+            <element name="bodySiteCode" nillable="false" type="string"/>
+            <element name="completionStatusCode" nillable="false" type="string"/>
+            <element name="confidentialityCode" nillable="false" type="string"/>
+            <element name="enteredByNumber" nillable="false" type="string"/>
+            <element name="enteredByNameFirst" nillable="false" type="string"/>
+            <element name="enteredByNameLast" nillable="false" type="string"/>
+            <element name="expirationDate" nillable="false" type="string"/>
+            <element name="facilityId" nillable="false" type="long"/>
+            <element name="facilityName" nillable="false" type="string"/>
+            <element name="financialEligibilityCode" nillable="false" type="string"/>
+            <element name="givenByNumber" nillable="false" type="string"/>
+            <element name="givenByNameLast" nillable="false" type="string"/>
+            <element name="givenByNameFirst" nillable="false" type="string"/>
+            <element name="idSubmitter" nillable="false" type="string"/>
+            <element name="informationSourceCode" nillable="false" type="string"/>
+            <element name="lotNumber" nillable="false" type="string"/>
+            <element name="manufacturerCode" nillable="false" type="string"/>
+            <element name="orderedByNumber" nillable="false" type="string"/>
+            <element name="refusalCode" nillable="false" type="string"/>
+            <element name="systemEntryDate" nillable="false" type="string"/>
+            <element name="visPublicationDate" nillable="false" type="string"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="GetNextOfKinListType">
+        <sequence>
+            <element name="receivedId" nillable="false" type="long"/>
+        </sequence>
+    </complexType>
+    <complexType name="GetNextOfKinListResultType">
+        <sequence>
+            <element name="nextOfKinList" nillable="false" type="dqa:NextOfKinListType"/>
+        </sequence>
+    </complexType>   
+    <complexType name="NextOfKinListType">
+        <sequence>
+            <element name="nextOfKinList" type="dqa:NextOfKinType" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <complexType name="NextOfKinType">
+        <sequence>
+            <element name="nextOfKinId" nillable="false" type="long"/>
+            <element name="positionId" nillable="false" type="long"/>
+            <element name="skipped" nillable="false" type="string"/>
+            <element name="addressCity" nillable="false" type="string"/>
+            <element name="addressCountry" nillable="false" type="string"/>
+            <element name="addressCountyParish" nillable="false" type="string"/>
+            <element name="addressState" nillable="false" type="string"/>
+            <element name="addressStreet" nillable="false" type="string"/>
+            <element name="addressStreet2" nillable="false" type="string"/>
+            <element name="addressType" nillable="false" type="string"/>
+            <element name="addressZip" nillable="false" type="string"/>
+            <element name="nameFirst" nillable="false" type="string"/>
+            <element name="nameLast" nillable="false" type="string"/>
+            <element name="nameMiddle" nillable="false" type="string"/>
+            <element name="namePrefix" nillable="false" type="string"/>
+            <element name="nameSuffix" nillable="false" type="string"/>
+            <element name="nameTypeCode" nillable="false" type="string"/>
+            <element name="phoneNumber" nillable="false" type="string"/>
+            <element name="relationshipCode" nillable="false" type="string"/>
+        </sequence>
+    </complexType>
+-->
+
+    <complexType name="FaultType">
+        <attribute name="errorCode" type="string"/>
+        <attribute name="index" type="int"/>
+        <attribute name="statusCode" type="int"/>
+        <attribute name="statusMessage" type="string"/>
+    </complexType>
+    <complexType name="FaultListType">
+        <sequence>
+            <element name="faults" type="dqa:FaultType" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+</schema>
