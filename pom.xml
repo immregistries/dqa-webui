@@ -124,13 +124,13 @@
 			<artifactId>hibernate-c3p0</artifactId>
 			<version>3.3.1.GA</version>
 		</dependency>
-    <!-- 
+		<!--  
 		<dependency>
 			<groupId>com.oracle</groupId>
 			<artifactId>oracle</artifactId>
-			<version>10.2.0</version>
+			<version>11.2.0.4</version>
 		</dependency>
-     -->
+		-->
 		<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
