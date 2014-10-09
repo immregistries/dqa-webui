@@ -1,0 +1,26 @@
+<html xmlns:wicket="http://wicket.apache.org/dtds.data/wicket-xhtml1.4-strict.dtd" >
+    <head>  
+        <title>Test Submit</title>
+    </head>
+    <body>
+        <h1>Test Submit</h1>
+        <form wicket:id="form">
+          <table>
+            <tr>
+              <td>Organization</td>
+              <td><input wicket:id="orgLabel" type="text"/></td>
+            </tr>
+            <tr>
+              <td>Message</td>
+              <td><textarea wicket:id="message" cols="90" rows="10"></textarea></td>
+            </tr>
+            <tr>
+              <td>&nbsp;</td>
+              <td><input wicket:id="button" type="submit" value="Submit"/></td>
+            </tr>
+          </table>
+        </form>
+        <h1>Results</h1>
+        <pre><span wicket:id="results">HL7 Results</span></pre>
+    </body>
+</html>

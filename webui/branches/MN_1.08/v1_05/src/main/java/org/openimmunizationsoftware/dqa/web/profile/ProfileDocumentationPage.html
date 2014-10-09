@@ -1,0 +1,28 @@
+<html
+	xmlns:wicket="http://wicket.apache.org/dtds.data/wicket-xhtml1.4-strict.dtd">
+<head>
+<title>DQA</title>
+<link rel="stylesheet" href="index.css" type="text/css" media="screen"
+	title="Stylesheet" />
+
+</head>
+<body>
+	<span wicket:id="navigationPanel"></span>
+
+	<div class="contents">
+		<h1>Profile Documentation</h1>
+		<p wicket:id="errorsOnlyExplanation">
+			Only showing issues that cause errors. <a wicket:id="showAllLink"
+				href="" class="fauxbutton">Show All</a>
+		</p>
+		<p wicket:id="allExplanation">
+			Showing all issues. <a wicket:id="showOnlyErrorsLink" href="" class="fauxbutton">Show
+				Only Errors</a>
+		</p>
+		<div wicket:id="documentationItems">
+			<span wicket:id="documentationItemText"></span>
+		</div>
+	</div>
+	<span wicket:id="versionPanel"></span>
+</body>
+</html>
