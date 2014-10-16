@@ -190,7 +190,7 @@ public class ReportTemplateServlet extends HttpServlet
 
       }
       out.println("    <hr>");
-      out.println("    <p>Version " + SoftwareVersion.VERSION + "</p>");
+      out.println("    <p>Version " + SoftwareVersion.VERSION + " released " + SoftwareVersion.RELEASE_DATE + "</p>");
       out.println("  </body>");
       out.println("</html>");
     } else

@@ -107,7 +107,7 @@ public class IncomingServlet extends HttpServlet
     out.println("    ");
 
     out.println("    <hr>");
-    out.println("    <p>Version " + SoftwareVersion.VERSION + "</p>");
+    out.println("    <p>Version " + SoftwareVersion.VERSION + " released " + SoftwareVersion.RELEASE_DATE + "</p>");
     out.println("  </body>");
     out.println("</html>");
     out.close();

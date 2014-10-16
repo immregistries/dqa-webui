@@ -496,6 +496,7 @@ public class FileImportProcessor extends ManagerThread
     logOut.println("Software Type:    " + KeyedSettingManager.getApplication().getApplicationType());
     logOut.println("Software Version: " + SoftwareVersion.VENDOR + " " + SoftwareVersion.PRODUCT + " " + SoftwareVersion.VERSION + " "
         + SoftwareVersion.BINARY_ID);
+    logOut.println("Software Release: " + SoftwareVersion.RELEASE_DATE);
     acceptedOut.close();
     ackOut.close();
     logOut.close();
