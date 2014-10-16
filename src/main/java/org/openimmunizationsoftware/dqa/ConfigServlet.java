@@ -913,7 +913,7 @@ public class ConfigServlet extends HttpServlet
         }
       }
       out.println("    <hr>");
-      out.println("    <p>Version " + SoftwareVersion.VERSION + "</p>");
+      out.println("    <p>Version " + SoftwareVersion.VERSION + " released " + SoftwareVersion.RELEASE_DATE + "</p>");
       out.println("  </body>");
       out.println("</html>");
     }
@@ -1128,6 +1128,8 @@ public class ConfigServlet extends HttpServlet
     configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.IN_SUBMISSION_ENABLE, "Read submission table enabled", "")
         .setValidValues(new String[] { "", "Y", "N" }));
     configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.IN_SUBMISSION_WAIT, "Pause after checking for updates (secs)", "").setIndent());
+    configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.IN_SUBMISSION_VERIFY_UNIQUE_CONTROL_ID, "Enforce unique message control ids", "")
+    .setValidValues(new String[] { "", "Y", "N" }).setIndent());
 
     configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.UPLOAD_ENABLED, "Upload enabled", "")
         .setValidValues(new String[] { "", "Y", "N" }));
@@ -1152,8 +1154,8 @@ public class ConfigServlet extends HttpServlet
         .setValidValues(new String[] { "", "Y", "N" }).setIndent());
 
     configKeyedSettingsList.add(new ConfigKeyedSetting(null, "Validate patient", ""));
-    configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.VALIDATE_PATIENT_FINANCIAL_STATUS_IGNORE, "Deprecated VFC status (PV1-20)", "")
-        .setValidValues(new String[] { "", "Y", "N" }));
+    configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.VALIDATE_PATIENT_FINANCIAL_STATUS_IGNORE, "Do not validate VFC status (PV1-20)", "")
+        .setValidValues(new String[] { "", "Y", "N" }).setIndent());
 
     configKeyedSettingsList.add(new ConfigKeyedSetting(null, "Validate vaccination", ""));
     configKeyedSettingsList.add(new ConfigKeyedSetting(KeyedSetting.VALIDATE_VACCINATION_FACILITY_MAX_LEN, "Vaccination facility max length", "")
