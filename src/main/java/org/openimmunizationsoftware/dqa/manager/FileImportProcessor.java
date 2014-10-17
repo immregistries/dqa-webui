@@ -213,7 +213,7 @@ public class FileImportProcessor extends ManagerThread
       procLog("Using profile " + profile.getProfileId() + " '" + profile.getProfileLabel() + "' for organization '"
           + profile.getOrganization().getOrgLabel() + "'");
     }
-
+    
   }
 
   private void lookToProcessFile(Session session, String filename) throws FileNotFoundException, IOException
@@ -224,8 +224,7 @@ public class FileImportProcessor extends ManagerThread
     if (inFile.exists() && inFile.canRead() && inFile.length() > 0)
     {
       long timeSinceLastChange = System.currentTimeMillis() - inFile.lastModified();
-      KeyedSettingManager ksm = KeyedSettingManager.getKeyedSettingManager();
-      if (timeSinceLastChange > (ksm.getKeyedValueInt(KeyedSetting.IN_SUBMISSION_WAIT, 60) * 1000))
+      if (timeSinceLastChange > (60 * 1000))
       {
         if (fileCanBeProcessed(inFile))
         {
@@ -234,7 +233,8 @@ public class FileImportProcessor extends ManagerThread
           try
           {
             ProcessLocker.lock(profile);
-            ProcessorCore fileImportProcessorCore = new ProcessorCore(processingOut, this, profile, acceptedDir, receiveDir);
+            ProcessorCore fileImportProcessorCore = new ProcessorCore(processingOut, this, profile, acceptedDir,
+                receiveDir);
             fileImportProcessorCore.process(session, filename, inFile);
           } finally
           {
@@ -496,7 +496,6 @@ public class FileImportProcessor extends ManagerThread
     logOut.println("Software Type:    " + KeyedSettingManager.getApplication().getApplicationType());
     logOut.println("Software Version: " + SoftwareVersion.VENDOR + " " + SoftwareVersion.PRODUCT + " " + SoftwareVersion.VERSION + " "
         + SoftwareVersion.BINARY_ID);
-    logOut.println("Software Release: " + SoftwareVersion.RELEASE_DATE);
     acceptedOut.close();
     ackOut.close();
     logOut.close();
@@ -515,7 +514,7 @@ public class FileImportProcessor extends ManagerThread
       messageReceived.setReceivedDate(receivedDate);
       messageReceived.setProfile(profile);
       messageReceived.setRequestText(message.toString());
-
+      
       parser.createVaccinationUpdateMessage(messageReceived);
       if (!messageReceived.hasErrors())
       {

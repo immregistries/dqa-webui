@@ -192,7 +192,11 @@ public class UploadSubmissionServlet extends HttpServlet
       {
         uploadDirTemp.mkdir();
       }
-
+      File uploadDirDest = new File(uploadDirTemp, "/process");
+      if (!uploadDirDest.exists())
+      {
+        uploadDirDest.mkdir();
+      }
       String profileCode = "";
       fileItemFactory.setRepository(uploadDirTemp);
       ServletFileUpload uploadHandler = new ServletFileUpload(fileItemFactory);
@@ -214,7 +218,7 @@ public class UploadSubmissionServlet extends HttpServlet
             }
           } else
           {
-            file = File.createTempFile("submission", ".hl7");
+            file = new File(uploadDirDest, item.getName());
             filename = item.getName();
             item.write(file);
           }
@@ -245,7 +249,6 @@ public class UploadSubmissionServlet extends HttpServlet
       session.update(submission);
       session.flush();
       trans.commit();
-      file.delete();
 
       out.println("   <p>File uploaded for processing.</p>");
       out.println("   <p><a href=\"config?menu=" + ConfigServlet.MENU_SUBMISSIONS + "&submitterName=" + URLEncoder.encode(profileCode, "UTF-8")
