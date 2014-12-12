@@ -18,7 +18,10 @@
     </license>
   </licenses>
   <properties>
+    <maven.test.skip>true</maven.test.skip>
+    <maven.test.failure.ignore>true</maven.test.failure.ignore>
     <wicket.version>1.5.5</wicket.version>
+    <javax.version>6.0</javax.version>
     <jetty.version>6.1.25</jetty.version>
     <slf4j.version>1.6.2</slf4j.version>
     <log4j.version>1.2.14</log4j.version>
@@ -83,8 +86,14 @@
       <version>4.8.1</version>
       <scope>test</scope>
     </dependency>
-
+    <dependency>
+      <groupId>javax</groupId>
+      <artifactId>javaee-api</artifactId>
+      <version>${javax.version}</version>
+      <scope>provided</scope>
+    </dependency>
     <!-- JETTY DEPENDENCIES FOR TESTING -->
+<!-- 
     <dependency>
       <groupId>org.mortbay.jetty</groupId>
       <artifactId>jetty</artifactId>
@@ -103,6 +112,7 @@
       <version>${jetty.version}</version>
       <scope>provided</scope>
     </dependency>
+ -->
     <dependency>
       <groupId>org.hibernate</groupId>
       <artifactId>hibernate</artifactId>
@@ -119,18 +129,18 @@
       <artifactId>hibernate-c3p0</artifactId>
       <version>3.3.1.GA</version>
     </dependency>
-<!--
 	<dependency>
 		<groupId>com.oracle</groupId>
 		<artifactId>oracle</artifactId>
 		<version>10.2.0</version>
 	</dependency>
--->
-  <dependency>
+<!-- 
+    <dependency>
       <groupId>mysql</groupId>
       <artifactId>mysql-connector-java</artifactId>
       <version>5.1.6</version>
     </dependency>
+ -->    
     <dependency>
       <groupId>org.apache.axis</groupId>
       <artifactId>axis</artifactId>
