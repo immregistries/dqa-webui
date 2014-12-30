@@ -7,6 +7,19 @@
  */
 package org.openimmunizationsoftware.dqa;
 
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
+import org.openimmunizationsoftware.dqa.db.model.*;
+import org.openimmunizationsoftware.dqa.manager.*;
+import org.openimmunizationsoftware.dqa.quality.model.ModelFactory;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -18,37 +31,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-
-import org.hibernate.Query;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.Transaction;
-import org.openimmunizationsoftware.dqa.db.model.Application;
-import org.openimmunizationsoftware.dqa.db.model.IssueAction;
-import org.openimmunizationsoftware.dqa.db.model.KeyedSetting;
-import org.openimmunizationsoftware.dqa.db.model.PotentialIssueStatus;
-import org.openimmunizationsoftware.dqa.db.model.ReportTemplate;
-import org.openimmunizationsoftware.dqa.db.model.Submission;
-import org.openimmunizationsoftware.dqa.db.model.SubmissionAnalysis;
-import org.openimmunizationsoftware.dqa.db.model.SubmitterProfile;
-import org.openimmunizationsoftware.dqa.db.model.UserAccount;
-import org.openimmunizationsoftware.dqa.manager.DatabaseCleanupManager;
-import org.openimmunizationsoftware.dqa.manager.KeyedSettingManager;
-import org.openimmunizationsoftware.dqa.manager.ManagerThread;
-import org.openimmunizationsoftware.dqa.manager.ManagerThreadMulti;
-import org.openimmunizationsoftware.dqa.manager.OrganizationManager;
-import org.openimmunizationsoftware.dqa.manager.ReloadManager;
-import org.openimmunizationsoftware.dqa.manager.SubmitterProfileManager;
-import org.openimmunizationsoftware.dqa.manager.UserAccountLoginManager;
-import org.openimmunizationsoftware.dqa.manager.WeeklyBatchManager;
-import org.openimmunizationsoftware.dqa.manager.WeeklyExportManager;
-import org.openimmunizationsoftware.dqa.quality.model.ModelFactory;
 
 public class ConfigServlet extends HttpServlet
 {
@@ -931,19 +913,39 @@ public class ConfigServlet extends HttpServlet
     out.println("          <th>Status</th>");
     out.println("          <th>Report Template</th>");
     out.println("        </tr>");
-    for (SubmitterProfile profile : profileList)
-    {
-      out.println("        <tr>");
-      out.println("          <td>" + profile.getProfileId() + "</td>");
-      out.println("          <td><a href=\"config?menu=" + MENU_PROFILE + "&profileId=" + profile.getProfileId() + "\">" + profile.getProfileCode()
-          + "</a></td>");
-      out.println("          <td>" + profile.getProfileStatus() + "</td>");
-      ReportTemplate reportTemplate = profile.getReportTemplate();
-      out.println("          <td><a href=\"config?menu=" + MENU_REPORT_TEMPLATE + "&templateId=" + reportTemplate.getTemplateId() + "\">"
-          + reportTemplate.getTemplateLabel() + "</a></td>");
-      out.println("        </tr>");
-    }
-    out.println("      </table>");
+
+      try
+      {
+
+
+      for (SubmitterProfile profile : profileList)
+      {
+
+          // new ??  if problem, do not display ??
+          ReportTemplate reportTemplate = profile.getReportTemplate();
+          if ((reportTemplate.getTemplateId() > 0) && (!reportTemplate.getTemplateLabel().equals(null))) {
+
+              out.println("        <tr>");
+              out.println("          <td>" + profile.getProfileId() + "</td>");
+              out.println("          <td><a href=\"config?menu=" + MENU_PROFILE + "&profileId=" + profile.getProfileId() + "\">" + profile.getProfileCode()
+                      + "</a></td>");
+              out.println("          <td>" + profile.getProfileStatus() + "</td>");
+
+              // new ??  if problem, do not display ??
+              // ReportTemplate reportTemplate = profile.getReportTemplate();
+
+              out.println("          <td><a href=\"config?menu=" + MENU_REPORT_TEMPLATE + "&templateId=" + reportTemplate.getTemplateId() + "\">"
+                      + reportTemplate.getTemplateLabel() + "</a></td>");
+              out.println("        </tr>");
+          }
+
+      }
+
+      } catch (Exception sqle)
+      {
+          sqle.printStackTrace(out);
+      }
+      out.println("      </table>");
   }
 
   public void printClobLimited(PrintWriter out, Clob requestContent) throws IOException
