@@ -7,14 +7,16 @@
  */
 package org.openimmunizationsoftware.dqa.web.servlet;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.net.URLEncoder;
-import java.util.Date;
-import java.util.List;
+import org.apache.wicket.util.file.FileDeleteStrategy;
+import org.apache.wicket.util.file.IFileCleaner;
+import org.apache.wicket.util.upload.DiskFileItemFactory;
+import org.apache.wicket.util.upload.FileItem;
+import org.apache.wicket.util.upload.ServletFileUpload;
+import org.hibernate.*;
+import org.openimmunizationsoftware.dqa.ConfigServlet;
+import org.openimmunizationsoftware.dqa.db.model.*;
+import org.openimmunizationsoftware.dqa.manager.KeyedSettingManager;
+import org.openimmunizationsoftware.dqa.manager.OrganizationManager;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
@@ -22,25 +24,11 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-
-import org.apache.wicket.util.file.FileDeleteStrategy;
-import org.apache.wicket.util.file.IFileCleaner;
-import org.apache.wicket.util.upload.DiskFileItemFactory;
-import org.apache.wicket.util.upload.FileItem;
-import org.apache.wicket.util.upload.ServletFileUpload;
-import org.hibernate.Hibernate;
-import org.hibernate.Query;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.Transaction;
-import org.openimmunizationsoftware.dqa.ConfigServlet;
-import org.openimmunizationsoftware.dqa.db.model.KeyedSetting;
-import org.openimmunizationsoftware.dqa.db.model.Organization;
-import org.openimmunizationsoftware.dqa.db.model.ReportTemplate;
-import org.openimmunizationsoftware.dqa.db.model.Submission;
-import org.openimmunizationsoftware.dqa.db.model.SubmitterProfile;
-import org.openimmunizationsoftware.dqa.manager.KeyedSettingManager;
-import org.openimmunizationsoftware.dqa.manager.OrganizationManager;
+import java.io.*;
+import java.net.URLEncoder;
+import java.util.Date;
+import java.util.List;
+import java.util.StringTokenizer;
 
 public class UploadSubmissionServlet extends HttpServlet
 {
@@ -218,8 +206,22 @@ public class UploadSubmissionServlet extends HttpServlet
             }
           } else
           {
-            file = new File(uploadDirDest, item.getName());
-            filename = item.getName();
+            //file = new File(uploadDirDest, item.getName());
+              file = new File(uploadDirDest, "testdqa.txt"); // testdqa.txt
+              StringTokenizer tokenizer = new StringTokenizer("\\");
+              StringTokenizer st2 = new StringTokenizer(item.getName());
+              String temp = "";
+              while(st2.hasMoreTokens()) {
+                  //System.out.println(st2.nextToken("\\"));
+                  temp = "";
+                  temp = st2.nextToken("\\");
+                  System.out.println(temp);
+
+              }
+
+              file = new File(uploadDirDest, temp);
+
+              filename = item.getName();
             item.write(file);
           }
         }
