@@ -170,7 +170,15 @@ public class UploadSubmissionServlet extends HttpServlet
       DiskFileItemFactory fileItemFactory = new DiskFileItemFactory(fileCleaner);
       fileItemFactory.setSizeThreshold(1 * 1024 * 1024); // 1 MB
       String uploadDirString = ksm.getKeyedValue(KeyedSetting.UPLOAD_DIR, ".");
+
+      // TODO:   For server deploy Uncomment next line; it is set to "//srv/tomcatc/appdata/dqa/" in dqa_keyed_setting table.
       File uploadDir = new File(uploadDirString);
+
+        // TODO:  For server deploy Comment out next line;
+        // //For local debugging only: set C:\MDHApps\dataupload folder for uploadDirString
+        //File uploadDir = new File("C:\\MDHApps\\dataupload"); // ???
+
+
       if (!uploadDir.exists())
       {
         throw new IllegalArgumentException("Upload directory not found, unable to upload");
@@ -206,8 +214,8 @@ public class UploadSubmissionServlet extends HttpServlet
             }
           } else
           {
-            //file = new File(uploadDirDest, item.getName());
-              file = new File(uploadDirDest, "testdqa.txt"); // testdqa.txt
+            file = new File(uploadDirDest, item.getName());
+              //file = new File(uploadDirDest, "testdqa.txt"); // testdqa.txt   for local testing ??
               StringTokenizer tokenizer = new StringTokenizer("\\");
               StringTokenizer st2 = new StringTokenizer(item.getName());
               String temp = "";
@@ -215,13 +223,18 @@ public class UploadSubmissionServlet extends HttpServlet
                   //System.out.println(st2.nextToken("\\"));
                   temp = "";
                   temp = st2.nextToken("\\");
-                  System.out.println(temp);
+                  //System.out.println(temp);
 
               }
 
               file = new File(uploadDirDest, temp);
 
-              filename = item.getName();
+              // Works in DEV but show the whole path.
+              //filename = item.getName();
+
+              // Locally next line works but in DEV causes issue.
+              filename = temp; // just the file name not the whole path/fileName
+
             item.write(file);
           }
         }
@@ -252,6 +265,7 @@ public class UploadSubmissionServlet extends HttpServlet
       session.flush();
       trans.commit();
 
+        // TODO: This set dqa_submission.submission_status to E always.       ????
       out.println("   <p>File uploaded for processing.</p>");
       out.println("   <p><a href=\"config?menu=" + ConfigServlet.MENU_SUBMISSIONS + "&submitterName=" + URLEncoder.encode(profileCode, "UTF-8")
           + "\">View Submissions</a></p>");
