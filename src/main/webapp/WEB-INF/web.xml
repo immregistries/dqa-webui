@@ -44,6 +44,10 @@
     <servlet-name>UploadSubmissionServlet</servlet-name>
     <servlet-class>org.openimmunizationsoftware.dqa.web.servlet.UploadSubmissionServlet</servlet-class>
   </servlet>
+  <servlet>
+    <servlet-name>IssueDocumentationServlet</servlet-name>
+    <servlet-class>org.openimmunizationsoftware.dqa.IssueDocumentationServlet</servlet-class>
+  </servlet>
 <!-- 
   <servlet>
     <servlet-name>UploadDataServlet</servlet-name>
@@ -106,10 +110,15 @@
     <servlet-name>ValidationDocumentationServlet</servlet-name>
     <url-pattern>/validationDocumentation</url-pattern>
   </servlet-mapping>
+
+  <servlet-mapping>
+    <servlet-name>ValidationDocumentationServlet</servlet-name>
+    <url-pattern>/validationDocumentation</url-pattern>
+  </servlet-mapping>
   
   <servlet-mapping>
-    <servlet-name>UploadSubmissionServlet</servlet-name>
-    <url-pattern>/uploadSubmission</url-pattern>
+    <servlet-name>IssueDocumentationServlet</servlet-name>
+    <url-pattern>/issue</url-pattern>
   </servlet-mapping>
 <!-- 
   <servlet-mapping>
