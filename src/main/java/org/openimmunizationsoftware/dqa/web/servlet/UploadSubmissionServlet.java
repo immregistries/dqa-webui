@@ -265,7 +265,7 @@ public class UploadSubmissionServlet extends HttpServlet
       session.flush();
       trans.commit();
 
-        // TODO: This set dqa_submission.submission_status to E always.       ????
+        // TODO: field RESPONSE_ANALYSIS field in dqa_submission has exception.       ????
       out.println("   <p>File uploaded for processing.</p>");
       out.println("   <p><a href=\"config?menu=" + ConfigServlet.MENU_SUBMISSIONS + "&submitterName=" + URLEncoder.encode(profileCode, "UTF-8")
           + "\">View Submissions</a></p>");

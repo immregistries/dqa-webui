@@ -12,8 +12,11 @@
       <property name="hibernate.connection.url">jdbc:oracle:thin:@dbdor15.health.state.mn.us:1521:mdhdev</property>
       <!--<property name="hibernate.connection.username">MIIC_DQA_USER</property>-->
       <property name="hibernate.connection.username">miic_dqa_user</property>
+      <!--<property name="hibernate.connection.username">miic_dqa</property>-->
+
       <property name="hibernate.dialect">org.hibernate.dialect.Oracle10gDialect</property>
-      <property name="connection.password">9V8TpYwYRv</property>
+      <property name="connection.password">TgqM9c3zXq</property>
+      <!--<property name="connection.password">Un9T288xhh</property>-->
 
 
 
