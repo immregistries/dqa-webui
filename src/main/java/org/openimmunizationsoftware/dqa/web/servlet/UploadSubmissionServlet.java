@@ -171,12 +171,14 @@ public class UploadSubmissionServlet extends HttpServlet
       fileItemFactory.setSizeThreshold(1 * 1024 * 1024); // 1 MB
       String uploadDirString = ksm.getKeyedValue(KeyedSetting.UPLOAD_DIR, ".");
 
+      // Server Deployment
       // TODO:   For server deploy Uncomment next line; it is set to "//srv/tomcatc/appdata/dqa/" in dqa_keyed_setting table.
       File uploadDir = new File(uploadDirString);
 
+        // Local Deployment
         // TODO:  For server deploy Comment out next line;
-        // //For local debugging only: set C:\MDHApps\dataupload folder for uploadDirString
-        //File uploadDir = new File("C:\\MDHApps\\dataupload"); // ???
+        // For local debugging only: set C:\MDHApps\dataupload folder for uploadDirString
+        //File uploadDir = new File("C:\\MDHApps\\dataupload"); // ????
 
 
       if (!uploadDir.exists())

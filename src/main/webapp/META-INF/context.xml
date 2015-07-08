@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Context path="/dqa">
+<Resource name="jdbc/MIIC_DQA"
+          auth="Container"
+          type="javax.sql.DataSource"
+          driverClassName="oracle.jdbc.OracleDriver"
+          url="jdbc:oracle:thin:@dbdor15.health.state.mn.us:1521:mdhdev"
+          username="miic_dqa_user"
+          password="TgqM9c3zXq"
+          removeAbandoned="true"
+          removeAbandonedTimeout="60"
+          logAbandoned="true"
+          maxActive="50"
+          maxIdle="10"
+          maxWait="10000"
+          validationQuery="select sysdate, sysdate-29 from dual" />
+</Context>

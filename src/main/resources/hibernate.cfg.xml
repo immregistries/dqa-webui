@@ -8,25 +8,32 @@
     <!--<property name="hibernate.dialect">org.hibernate.dialect.PostgreSQLDialect</property>-->
     <!--<property name="connection.password">gbmdh14!</property>-->
 
-      <property name="hibernate.connection.driver_class">oracle.jdbc.OracleDriver</property>
-      <property name="hibernate.connection.url">jdbc:oracle:thin:@dbdor15.health.state.mn.us:1521:mdhdev</property>
-      <!--<property name="hibernate.connection.username">MIIC_DQA_USER</property>-->
-      <property name="hibernate.connection.username">miic_dqa_user</property>
-      <!--<property name="hibernate.connection.username">miic_dqa</property>-->
+    <!-- ?? last comment out -->
+    <property name="hibernate.connection.dialect">org.hibernate.dialect.Oracle10gDialect</property>
+    <!--<property name="dialect">org.hibernate.dialect.Oracle10gDialect</property>-->
+    <property name="hibernate.connection.datasource">java:comp/env/jdbc/MIIC_DQA</property>
 
-      <property name="hibernate.dialect">org.hibernate.dialect.Oracle10gDialect</property>
-      <property name="connection.password">TgqM9c3zXq</property>
+      <!--The Data source info has moved to context.xml-->
+      <!--<property name="hibernate.connection.driver_class">oracle.jdbc.OracleDriver</property>-->
+      <!--<property name="hibernate.connection.url">jdbc:oracle:thin:@dbdor15.health.state.mn.us:1521:mdhdev</property>-->
+      <!--<property name="hibernate.connection.username">miic_dqa_user</property>-->
+      <!--<property name="hibernate.dialect">org.hibernate.dialect.Oracle10gDialect</property>-->
+      <!--<property name="connection.password">TgqM9c3zXq</property>-->
+
+      <!--<property name="hibernate.connection.username">MIIC_DQA_USER</property>-->
+      <!--<property name="hibernate.connection.username">miic_dqa</property>-->
       <!--<property name="connection.password">Un9T288xhh</property>-->
 
-
-
+    <!--The Data source info has moved to context.xml, these line commented out too.-->
     <property name="show_sql">false</property>
-    <property name="hibernate.c3p0.acquire_increment">1</property>
-    <property name="hibernate.c3p0.idle_test_period">100</property><!--  seconds -->
-    <property name="hibernate.c3p0.timeout">100</property><!--  seconds -->
-    <property name="hibernate.c3p0.max_size">30</property>
-    <property name="hibernate.c3p0.min_size">5</property>
-    <property name="hibernate.c3p0.max_statements">10</property>
+    <!--<property name="hibernate.c3p0.acquire_increment">1</property>-->
+    <!--<property name="hibernate.c3p0.idle_test_period">100</property>&lt;!&ndash;  seconds &ndash;&gt;-->
+    <!--<property name="hibernate.c3p0.timeout">100</property>&lt;!&ndash;  seconds &ndash;&gt;-->
+    <!--<property name="hibernate.c3p0.max_size">30</property>-->
+    <!--<property name="hibernate.c3p0.min_size">5</property>-->
+    <!--<property name="hibernate.c3p0.max_statements">10</property>-->
+
+
     <mapping resource="org/openimmunizationsoftware/dqa/db/model/Application.hbm.xml"/>
     <mapping resource="org/openimmunizationsoftware/dqa/db/model/BatchActions.hbm.xml"/>
     <mapping resource="org/openimmunizationsoftware/dqa/db/model/BatchIssues.hbm.xml"/>
