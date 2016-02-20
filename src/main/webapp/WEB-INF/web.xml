@@ -23,14 +23,18 @@
 		<load-on-startup>1</load-on-startup>
 	</servlet>
   <servlet>
+    <servlet-name>CDCWSDLServlet</servlet-name>
+    <servlet-class>org.openimmunizationsoftware.dqa.CDCWSDLServlet</servlet-class>
+  </servlet>
+  <servlet>
     <servlet-name>RemoteConnectionReportingServlet</servlet-name>
     <servlet-class>org.openimmunizationsoftware.dqa.web.servlet.RemoteConnectionReportingServlet</servlet-class>
-    <load-on-startup>1</load-on-startup>
+    <load-on-startup>2</load-on-startup>
   </servlet>
 	<servlet>
 		<servlet-name>ConfigServlet</servlet-name>
 		<servlet-class>org.openimmunizationsoftware.dqa.ConfigServlet</servlet-class>
-		<load-on-startup>1</load-on-startup>
+		<load-on-startup>3</load-on-startup>
 	</servlet>
   <servlet>
     <servlet-name>ReportTemplateServlet</servlet-name>
@@ -91,6 +95,11 @@
 		<servlet-name>InServlet</servlet-name>
 		<url-pattern>/in</url-pattern>
 	</servlet-mapping>
+
+  <servlet-mapping>
+    <servlet-name>CDCWSDLServlet</servlet-name>
+    <url-pattern>/wsdl</url-pattern>
+  </servlet-mapping>
   
   <servlet-mapping>
     <servlet-name>RemoteConnectionReportingServlet</servlet-name>
@@ -111,11 +120,6 @@
     <url-pattern>/validationDocumentation</url-pattern>
   </servlet-mapping>
 
-  <servlet-mapping>
-    <servlet-name>ValidationDocumentationServlet</servlet-name>
-    <url-pattern>/validationDocumentation</url-pattern>
-  </servlet-mapping>
-  
   <servlet-mapping>
     <servlet-name>IssueDocumentationServlet</servlet-name>
     <url-pattern>/issue</url-pattern>
