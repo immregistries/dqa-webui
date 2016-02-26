@@ -47,10 +47,12 @@ import org.openimmunizationsoftware.dqa.process.MessageProcessRequest;
 import org.openimmunizationsoftware.dqa.process.MessageProcessResponse;
 import org.openimmunizationsoftware.dqa.process.MessageProcessor;
 import org.openimmunizationsoftware.dqa.quality.QualityCollector;
+import org.openimmunizationsoftware.dqa.transport.SubmitSingleMessage;
 
 public class IncomingServlet extends HttpServlet
 {
 
+  protected static final String SUBMITTER_PROFILE = "submitterProfile";
   protected static FileImportManager fileImportManager = null;
   protected static SubmissionManager submissionManager = null;
   protected static WeeklyBatchManager weeklyBatchManager = null;
@@ -65,17 +67,6 @@ public class IncomingServlet extends HttpServlet
     weeklyBatchManager = WeeklyBatchManager.getWeeklyBatchManager();
     weeklyExportManager = WeeklyExportManager.getWeeklyExportManager();
     databaseCleanupManager = DatabaseCleanupManager.getDatabaseCleanupManager();
-  }
-
-  protected class SubmitSingleMessage
-  {
-    protected String username = "";
-    protected String password = "";
-    protected String facilityID = "";
-    protected String hl7Message = "";
-    protected SubmitterProfile profile = null;
-    protected String accessDenied = null;
-    protected boolean debug = false;
   }
 
   @Override
@@ -130,11 +121,11 @@ public class IncomingServlet extends HttpServlet
   {
     SubmitSingleMessage ssm = new SubmitSingleMessage();
 
-    ssm.username = req.getParameter("USERID");
-    ssm.password = req.getParameter("PASSWORD");
-    ssm.facilityID = req.getParameter("FACILITYID");
-    ssm.debug = req.getParameter("DEBUG") != null;
-    ssm.hl7Message = req.getParameter("MESSAGEDATA");
+    ssm.setUsername(req.getParameter("USERID"));
+    ssm.setPassword(req.getParameter("PASSWORD"));
+    ssm.setFacilityID(req.getParameter("FACILITYID"));
+    ssm.setDebug(req.getParameter("DEBUG") != null);
+    ssm.setHl7Message(req.getParameter("MESSAGEDATA"));
 
     resp.setContentType("text/plain");
     PrintWriter out = new PrintWriter(resp.getOutputStream());
@@ -142,14 +133,14 @@ public class IncomingServlet extends HttpServlet
     SessionFactory factory = OrganizationManager.getSessionFactory();
     Session session = factory.openSession();
     authorize(ssm, session);
-    if (ssm.accessDenied == null)
+    if (ssm.getAccessDenied() == null)
     {
       processMessage(ssm, out, session);
     } else
     {
-      out.println(ssm.accessDenied);
+      out.println(ssm.getAccessDenied());
     }
-    if (ssm.debug)
+    if (ssm.isDebug())
     {
       // printDebugOutput(out, session, profile, qualityCollector);
     }
@@ -159,53 +150,55 @@ public class IncomingServlet extends HttpServlet
     session.close();
   }
 
-  public void processMessage(SubmitSingleMessage ssm, PrintWriter out, Session session) throws IOException
+  public static void processMessage(SubmitSingleMessage ssm, PrintWriter out, Session session) throws IOException
   {
+    SubmitterProfile submitterProfile = (SubmitterProfile) ssm.getAttribute(SUBMITTER_PROFILE);
     try
     {
-      ProcessLocker.lock(ssm.profile);
-      QualityCollector qualityCollector = new QualityCollector("Realtime HTTPS", BatchType.SUBMISSION, ssm.profile);
+      ProcessLocker.lock(submitterProfile);
+      QualityCollector qualityCollector = new QualityCollector("Realtime HTTPS", BatchType.SUBMISSION, submitterProfile);
       // Results results = new Results();
       // results.setDebug(debug);
       // processStream(debug, session, profile, messageData, out,
       // qualityCollector, results);
-      ssm.debug = processStream(ssm.debug, session, ssm.profile, ssm.hl7Message, out, qualityCollector);
+      ssm.setDebug(processStream(ssm.isDebug(), session, submitterProfile, ssm.getHl7Message(), out, qualityCollector));
       // debug = results.isDebug();
     } finally
     {
-      ProcessLocker.unlock(ssm.profile);
+      ProcessLocker.unlock(submitterProfile);
     }
   }
 
-  public void authorize(SubmitSingleMessage ssm, Session session)
+  public static void authorize(SubmitSingleMessage ssm, Session session)
   {
     Transaction tx = session.beginTransaction();
-    if (ssm.username == null || ssm.username.equals(""))
+    if (ssm.getUsername() == null || ssm.getUsername().equals(""))
     {
-      ssm.accessDenied = "USERID was not specified and is required for real time submission";
-    } else if (ssm.password == null || ssm.password.equals(""))
+      ssm.setAccessDenied("USERID was not specified and is required for real time submission");
+    } else if (ssm.getPassword() == null || ssm.getPassword().equals(""))
     {
-      ssm.accessDenied = "PASSWORD was not specified and is required for real time submission";
-    } else if (ssm.facilityID == null || ssm.facilityID.equals(""))
+      ssm.setAccessDenied("PASSWORD was not specified and is required for real time submission");
+    } else if (ssm.getFacilityID() == null || ssm.getFacilityID().equals(""))
     {
-      ssm.accessDenied = "FACILITYID was not specified and is required for real time submission";
+      ssm.setAccessDenied("FACILITYID was not specified and is required for real time submission");
     }
-    if (ssm.accessDenied == null)
+    if (ssm.getAccessDenied() == null)
     {
       boolean isEmail = false;
-      int pos = ssm.username.indexOf("@");
-      isEmail = pos > 1 && pos < (ssm.username.length() - 2);
+      int pos = ssm.getUsername().indexOf("@");
+      isEmail = pos > 1 && pos < (ssm.getUsername().length() - 2);
       String emailUsername = "";
       String emailHost = "";
       if (isEmail)
       {
-        emailUsername = ssm.username.substring(0, pos);
-        emailHost = ssm.username.substring(pos + 1);
+        emailUsername = ssm.getUsername().substring(0, pos);
+        emailHost = ssm.getUsername().substring(pos + 1);
       }
+      SubmitterProfile submitterProfile = null;
       if (isEmail)
       {
         Query query = session.createQuery("from UserAccount where email = ?");
-        query.setParameter(0, ssm.username);
+        query.setParameter(0, ssm.getUsername());
         List<UserAccount> userAccounts = query.list();
         UserAccount userAccount = null;
         if (userAccounts.size() > 0)
@@ -245,59 +238,65 @@ public class IncomingServlet extends HttpServlet
           }
           userAccount = new UserAccount();
           userAccount.setAccountType(UserAccount.ACCOUNT_TYPE_SUBMITTER);
-          userAccount.setEmail(ssm.username);
+          userAccount.setEmail(ssm.getUsername());
           userAccount.setUsername(username);
           userAccount.setOrganization(organization);
-          userAccount.setPassword(ssm.password);
+          userAccount.setPassword(ssm.getPassword());
           session.save(userAccount);
         }
+        
         query = session.createQuery("from SubmitterProfile where organization = ? and profileLabel = ?");
         query.setParameter(0, userAccount.getOrganization());
-        query.setParameter(1, ssm.facilityID);
+        query.setParameter(1, ssm.getFacilityID());
         List<SubmitterProfile> submitterProfiles = query.list();
         if (submitterProfiles.size() == 0)
         {
-          ssm.profile = new SubmitterProfile();
-          ssm.profile.setAccessKey(ssm.password);
-          ssm.profile.setDataFormat(SubmitterProfile.DATA_FORMAT_HL7V2);
-          ssm.profile.setOrganization(userAccount.getOrganization());
-          ssm.profile.setProfileCode(ssm.facilityID);
-          ssm.profile.setProfileLabel(ssm.facilityID);
-          ssm.profile.setProfileStatus(SubmitterProfile.PROFILE_STATUS_TEST);
-          ssm.profile.setTransferPriority(SubmitterProfile.TRANSFER_PRIORITY_NORMAL);
+          submitterProfile = new SubmitterProfile();
+          ssm.setAttribute(SUBMITTER_PROFILE, submitterProfile);
+          submitterProfile.setAccessKey(ssm.getPassword());
+          submitterProfile.setDataFormat(SubmitterProfile.DATA_FORMAT_HL7V2);
+          submitterProfile.setOrganization(userAccount.getOrganization());
+          submitterProfile.setProfileCode(ssm.getFacilityID());
+          submitterProfile.setProfileLabel(ssm.getFacilityID());
+          submitterProfile.setProfileStatus(SubmitterProfile.PROFILE_STATUS_TEST);
+          submitterProfile.setTransferPriority(SubmitterProfile.TRANSFER_PRIORITY_NORMAL);
           query = session.createQuery("from Application where runThis = 'Y'");
           List<Application> applicationList = query.list();
           if (applicationList.size() > 0)
           {
             Application application = applicationList.get(0);
-            ssm.profile.setReportTemplate(application.getPrimaryReportTemplate());
+            submitterProfile.setReportTemplate(application.getPrimaryReportTemplate());
           } else
           {
-            ssm.profile.setReportTemplate((ReportTemplate) session.get(ReportTemplate.class, 1));
+            submitterProfile.setReportTemplate((ReportTemplate) session.get(ReportTemplate.class, 1));
           }
 
-          session.save(ssm.profile);
+          session.save(submitterProfile);
         } else
         {
-          ssm.profile = submitterProfiles.get(0);
-          if (!ssm.profile.getAccessKey().equals(ssm.password))
+          submitterProfile = submitterProfiles.get(0);
+          if (!submitterProfile.getAccessKey().equals(ssm.getPassword()))
           {
-            ssm.accessDenied = "Unrecognized USERID, PASSWORD or FACILITYID";
-            ssm.profile = null;
+            ssm.setAccessDenied("Unrecognized USERID, PASSWORD or FACILITYID");
+          }
+          else
+          {
+            ssm.setAttribute(SUBMITTER_PROFILE, submitterProfile);
           }
         }
       } else
       {
         Query query = session.createQuery("from SubmitterProfile where profileCode = ? and accessKey = ?");
-        query.setParameter(0, ssm.username);
-        query.setParameter(1, ssm.password);
+        query.setParameter(0, ssm.getUsername());
+        query.setParameter(1, ssm.getPassword());
         List<SubmitterProfile> submitterProfiles = query.list();
         if (submitterProfiles.size() == 0)
         {
-          ssm.accessDenied = "Authorization failed, invalid USERID or PASSWORD";
+          ssm.setAccessDenied("Authorization failed, invalid USERID or PASSWORD");
         } else
         {
-          ssm.profile = submitterProfiles.get(0);
+          submitterProfile = submitterProfiles.get(0);
+          ssm.setAttribute(SUBMITTER_PROFILE, submitterProfile);
         }
       }
     }
@@ -431,7 +430,7 @@ public class IncomingServlet extends HttpServlet
   // public static void processStream(boolean debug, Session session,
   // SubmitterProfile profile, String messageData, PrintWriter out,
   // QualityCollector qualityCollector, Results results) throws IOException
-  public boolean processStream(boolean debug, Session session, SubmitterProfile profile, String messageData, PrintWriter out,
+  public static boolean processStream(boolean debug, Session session, SubmitterProfile profile, String messageData, PrintWriter out,
       QualityCollector qualityCollector) throws IOException
   {
     VaccinationParserHL7 parser = new VaccinationParserHL7(profile);
@@ -533,7 +532,7 @@ public class IncomingServlet extends HttpServlet
 
   private static final boolean ALLOW_DEBUG_TO_WORK = false;
 
-  private void printMessage(MessageReceivedGeneric msg, QualityCollector qualityCollector, PrintWriter out, MessageProcessRequest request)
+  private static void printMessage(MessageReceivedGeneric msg, QualityCollector qualityCollector, PrintWriter out, MessageProcessRequest request)
   {
 
     out.print(msg.getResponseText());
@@ -543,7 +542,7 @@ public class IncomingServlet extends HttpServlet
     }
   }
 
-  public void printDebug(MessageReceivedGeneric msg, QualityCollector qualityCollector, PrintWriter out)
+  public static void printDebug(MessageReceivedGeneric msg, QualityCollector qualityCollector, PrintWriter out)
   {
     try
     {
