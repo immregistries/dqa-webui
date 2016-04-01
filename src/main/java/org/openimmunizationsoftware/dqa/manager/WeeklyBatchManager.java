@@ -11,6 +11,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -35,10 +36,12 @@ import org.openimmunizationsoftware.dqa.db.model.SubmitStatus;
 import org.openimmunizationsoftware.dqa.db.model.SubmitterProfile;
 import org.openimmunizationsoftware.dqa.quality.QualityCollector;
 import org.openimmunizationsoftware.dqa.quality.QualityReport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class WeeklyBatchManager extends ManagerThread
 {
-
+  private static final Logger LOGGER = LoggerFactory.getLogger(WeeklyBatchManager.class);
   private static WeeklyBatchManager singleton = null;
 
   public static synchronized WeeklyBatchManager getWeeklyBatchManager()
@@ -46,8 +49,7 @@ public class WeeklyBatchManager extends ManagerThread
     if (singleton == null)
     {
       singleton = new WeeklyBatchManager();
-      singleton.start();
-    }
+      }
     return singleton;
   }
 
@@ -56,6 +58,7 @@ public class WeeklyBatchManager extends ManagerThread
   }
 
   private SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy hh:mm a");
+  private SimpleDateFormat longDateFormat = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss.SSS a");
 
   private int weekStartDay;
   private Date processingStartTime;
@@ -63,78 +66,97 @@ public class WeeklyBatchManager extends ManagerThread
 
   private Calendar endOfWeek;
   private Calendar startOfWeek;
-
-  @Override
-  public void run()
-  {
-    internalLog.append("Starting weekly batch manager\r");
-    while (keepRunning)
-    {
-      try
-      {
-        setWeeklyParameters();
-        Date now = new Date();
-        if (processingStartTime.before(now) && processingEndTime.after(now))
-        {
-          runNow(now);
-        } else
-        {
-          internalLog.append("Weekly Batch Manager will not run now\r");
-        }
-      } catch (Throwable e)
-      {
-        e.printStackTrace();
-        lastException = e;
-      }
-      internalLog.append("Processing complete\r");
-      try
-      {
-        synchronized (sdf)
-        {
-          sdf.wait(10 * 1000 * 60); // 10 minutes
-        }
-      } catch (InterruptedException ie)
-      {
-        keepRunning = false;
-        return;
-      }
-      internalLog.setLength(0);
-    }
+  private String currentLogDate;
+  
+  private void internalLogging(String message) {
+	  internalLog.append(message);
+	  fileLogger(message);
   }
-
+  
+  private void fileLogger(String message) {
+	  message = "[" + currentLogDate + "] " + message;
+	  LOGGER.info(message);
+  }
+  
   @Override
-  public void runNow(Date now)
+  public void runForDate(Date now) {
+	  try {
+			synchronized (this) {
+				internalLog.setLength(0);
+			  	internalLogging("Initiating weekly batch manager\r");
+			  	executeProcess(now);
+				internalLogging("Finishing weekly batch manager\r");
+			}
+		} catch (Throwable e) {
+			e.printStackTrace();
+			internalLogging("Weekly batch manager finished with errors\r");
+			lastException = e;
+		}
+  }
+  
+  private void executeProcess(Date reportDate) 
   {
-    determineStartAndEndOfWeek(now);
+	long start = Calendar.getInstance().getTimeInMillis();
+	this.currentLogDate = longDateFormat.format(new Date());
+	internalLogging("Starting weekly batch manager. Execution DateTime[" + this.currentLogDate + "]\r");
+	internalLogging("Running for date: " + sdf.format(reportDate) + "\r");
+	setWeeklyParameters();
+    determineStartAndEndOfWeek(reportDate);
     SessionFactory factory = OrganizationManager.getSessionFactory();
     Session session = factory.openSession();
-    Transaction tx = session.beginTransaction();
-    Query query = session
-        .createQuery("from SubmitterProfile where (profile_status = 'Prod' or profile_status = 'Test' or profile_status = 'Hold') and profile_id >= 1200");
-    List<SubmitterProfile> profiles = query.list();
-    tx.commit();
-    for (SubmitterProfile profile : profiles)
-    {
-      tx = session.beginTransaction();
-      internalLog.append("Looking at profile " + profile.getProfileLabel() + " for " + profile.getProfileCode() + "\r");
-      query = session.createQuery("from MessageBatch where profile = ? and batchType = ? and endDate = ?");
-      query.setParameter(0, profile);
-      query.setParameter(1, BatchType.WEEKLY);
-      query.setParameter(2, endOfWeek.getTime());
-      List<MessageBatch> messageBatchList = query.list();
-      tx.commit();
-      if (messageBatchList.size() == 0)
-      {
-        internalLog.append(" + Creating batch\r");
-        // batch has not yet been created. Create one now
-        // Get all messages received in the week
-        createWeeklyBatch(session, profile);
-      } else
-      {
-        internalLog.append(" + No batches to create\r");
-      }
+    try {
+	    Transaction tx = session.beginTransaction();
+	    Query query = session.createQuery("from SubmitterProfile where (profile_status = 'Prod' or profile_status = 'Test' or profile_status = 'Hold') and profile_id >= 1200");
+	    List<SubmitterProfile> profiles = query.list();
+	    tx.commit();
+	    
+	    //Grab the ID's out of the objects, and clear the list. 
+	    List<Integer> profileIds = new ArrayList<Integer>();
+	    for (SubmitterProfile profile : profiles) {
+	    	profileIds.add(profile.getProfileId());
+	    }
+	    profiles = null;
+	    session.flush();
+	    session.clear();
+	    
+	    //Each submitter profile gets its own transaction, and the session is cleared after each one. 
+	    for (Integer profileId : profileIds)
+	    {
+	      tx = session.beginTransaction();
+	      
+	      //Re-get the submitter profile within this session context so that the report can access some of the lazy-loaded info. 
+	      SubmitterProfile profile = (SubmitterProfile) session.get(SubmitterProfile.class, profileId);
+	      
+	      internalLogging("Looking at profile " + profile.getProfileLabel() + " for " + profile.getProfileCode() + "\r");
+	      query = session.createQuery("from MessageBatch where profile = :profile and batchType = :type and endDate = :endDate");
+	      query.setParameter("profile", profile);
+	      query.setParameter("type", BatchType.WEEKLY);
+	      query.setParameter("endDate", endOfWeek.getTime());
+	      List<MessageBatch> messageBatchList = query.list();
+	      tx.commit();
+	      if (messageBatchList.size() == 0)
+	      {
+	        internalLogging(" + Creating batch\r");
+	        // batch has not yet been created. Create one now
+	        // Get all messages received in the week
+	        
+	        createWeeklyBatch(session, profile);
+	        
+	        //work is done for this pin! Flush and clear to free the memory. 
+	        session.flush();
+	        session.clear();
+	      } else
+	      {
+	        internalLogging(" + No batches to create\r");
+	      }
+	    }
+    } finally {
+    	session.close();
     }
-    session.close();
+    internalLogging("Processing complete for report date " + sdf.format(reportDate) + "\r");
+    fileLogger("--------------------[" + this.currentLogDate + "]------------------------");
+    long finish = Calendar.getInstance().getTimeInMillis();
+    internalLogging("Weekly Batch Process Elapsed time: " + ((finish - start)/1000) + " seconds");
   }
 
   private void createWeeklyBatch(Session session, SubmitterProfile profile)
@@ -149,52 +171,52 @@ public class WeeklyBatchManager extends ManagerThread
     session.save(messageBatch);
     {
       query = session
-          .createQuery("from MessageBatch where profile = ? and endDate >= ? and endDate < ? and batchType = ?");
-      query.setParameter(0, profile);
-      query.setParameter(1, startOfWeek.getTime());
-      query.setParameter(2, endOfWeek.getTime());
-      query.setParameter(3, BatchType.SUBMISSION);
+          .createQuery("from MessageBatch where profile = :param1 and endDate >= :param2 and endDate < :param3 and batchType = :param4");
+      query.setParameter("param1", profile);
+      query.setParameter("param2", startOfWeek.getTime());
+      query.setParameter("param3", endOfWeek.getTime());
+      query.setParameter("param4", BatchType.SUBMISSION);
       List<MessageBatch> submittedBatches = query.list();
       for (MessageBatch submittedBatch : submittedBatches)
       {
-        query = session.createQuery("from BatchReport where messageBatch = ?");
-        query.setParameter(0, submittedBatch);
+        query = session.createQuery("from BatchReport where messageBatch = :param1");
+        query.setParameter("param1", submittedBatch);
         List<BatchReport> reportList = query.list();
         if (reportList.size() > 0)
         {
           submittedBatch.setBatchReport(reportList.get(0));
         }
         messageBatch.addToCounts(submittedBatch);
-        query = session.createQuery("from BatchIssues where messageBatch = ?");
-        query.setParameter(0, submittedBatch);
+        query = session.createQuery("from BatchIssues where messageBatch = :param1");
+        query.setParameter("param1", submittedBatch);
         List<BatchIssues> batchIssuesList = query.list();
         for (BatchIssues batchIssues : batchIssuesList)
         {
           messageBatch.getBatchIssues(batchIssues.getIssue()).inc(batchIssues);
         }
-        query = session.createQuery("from BatchActions where messageBatch = ?");
-        query.setParameter(0, submittedBatch);
+        query = session.createQuery("from BatchActions where messageBatch = :param1");
+        query.setParameter("param1", submittedBatch);
         List<BatchActions> batchActionsList = query.list();
         for (BatchActions batchActions : batchActionsList)
         {
           messageBatch.getBatchActions(batchActions.getIssueAction()).inc(batchActions);
         }
-        query = session.createQuery("from BatchCodeReceived where messageBatch = ?");
-        query.setParameter(0, submittedBatch);
+        query = session.createQuery("from BatchCodeReceived where messageBatch = :param1");
+        query.setParameter("param1", submittedBatch);
         List<BatchCodeReceived> batchCodeReceivedList = query.list();
         for (BatchCodeReceived batchCodeReceived : batchCodeReceivedList)
         {
           messageBatch.getBatchCodeReceived(batchCodeReceived.getCodeReceived()).inc(batchCodeReceived);
         }
-        query = session.createQuery("from BatchVaccineCvx where messageBatch = ?");
-        query.setParameter(0, submittedBatch);
+        query = session.createQuery("from BatchVaccineCvx where messageBatch = :param1");
+        query.setParameter("param1", submittedBatch);
         List<BatchVaccineCvx> batchVaccineCvxList = query.list();
         for (BatchVaccineCvx batchVaccineCvx : batchVaccineCvxList)
         {
           messageBatch.getBatchVaccineCvx(batchVaccineCvx.getVaccineCvx()).inc(batchVaccineCvx);
         }
-        query = session.createQuery("from ReceiveQueue where messageBatch = ?");
-        query.setParameter(0, submittedBatch);
+        query = session.createQuery("from ReceiveQueue where messageBatch = :param1");
+        query.setParameter("param1", submittedBatch);
         List<ReceiveQueue> receiveQueueList = query.list();
         for (ReceiveQueue receiveQueue : receiveQueueList)
         {
@@ -203,8 +225,8 @@ public class WeeklyBatchManager extends ManagerThread
           MessageReceived messageReceived = receiveQueue.getMessageReceived();
           if (qualityCollector.getExampleHeader() == null)
           {
-            query = session.createQuery("from MessageHeader where messageReceived = ?");
-            query.setParameter(0, messageReceived);
+            query = session.createQuery("from MessageHeader where messageReceived = :param1");
+            query.setParameter("param1", messageReceived);
             List<MessageHeader> messageHeaderList = query.list();
             if (messageHeaderList.size() > 0)
             {
@@ -231,7 +253,10 @@ public class WeeklyBatchManager extends ManagerThread
         }
       }
     }
+    fileLogger("about to score the batch");
     qualityCollector.score();
+    fileLogger("scoring done");
+    
     KeyedSettingManager ksm = KeyedSettingManager.getKeyedSettingManager();
     if (ksm.getKeyedValueBoolean(KeyedSetting.IN_FILE_ENABLE, false))
     {
@@ -241,8 +266,8 @@ public class WeeklyBatchManager extends ManagerThread
           && !profile.getProfileCode().equals(""))
       {
         File dqaDir = createDqaDir(profile, ksm, rootDir);
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
-        String filename = "Weekly DQA for " + profile.getProfileCode() + "." + sdf.format(endOfWeek.getTime()) + "." + getScoreDescription(messageBatch.getBatchReport().getOverallScore()) + "."
+        SimpleDateFormat inputformat = new SimpleDateFormat("yyyyMMdd");
+        String filename = "Weekly DQA for " + profile.getProfileCode() + "." + inputformat.format(endOfWeek.getTime()) + "." + getScoreDescription(messageBatch.getBatchReport().getOverallScore()) + "."
             + messageBatch.getBatchReport().getOverallScore() + ".html";
         try
         {
@@ -257,6 +282,7 @@ public class WeeklyBatchManager extends ManagerThread
       }
     }
     saveMessageBatch(session, profile, qualityCollector, messageBatch);
+    
     tx.commit();
   }
 
@@ -317,8 +343,8 @@ public class WeeklyBatchManager extends ManagerThread
     startOfWeek = Calendar.getInstance();
     startOfWeek.setTime(endOfWeek.getTime());
     startOfWeek.add(Calendar.DAY_OF_MONTH, -7);
-    internalLog.append("End of week = " + sdf.format(endOfWeek.getTime()) + "\r");
-    internalLog.append("Start of week = " + sdf.format(startOfWeek.getTime()) + "\r");
+    internalLogging("End of week = " + sdf.format(endOfWeek.getTime()) + "\r");
+    internalLogging("Start of week = " + sdf.format(startOfWeek.getTime()) + "\r");
   }
 
   private void setWeeklyParameters()
@@ -327,9 +353,9 @@ public class WeeklyBatchManager extends ManagerThread
     weekStartDay = ksm.getKeyedValueInt(KeyedSetting.WEEKLY_BATCH_DAY, 1);
     processingStartTime = getTimeToday(ksm.getKeyedValue(KeyedSetting.WEEKLY_BATCH_START_TIME, "01:00"));
     processingEndTime = getTimeToday(ksm.getKeyedValue(KeyedSetting.WEEKLY_BATCH_END_TIME, "12:00"));
-    internalLog.append("Weekly batch day = " + weekStartDay + "\r");
-    internalLog.append("Processing start time = " + processingStartTime + "\r");
-    internalLog.append("Processing end time = " + processingEndTime + "\r");
+    internalLogging("Weekly batch day = " + weekStartDay + "\r");
+    internalLogging("Processing start time = " + processingStartTime + "\r");
+    internalLogging("Processing end time = " + processingEndTime + "\r");
   }
 
   private String getScoreDescription(int score)

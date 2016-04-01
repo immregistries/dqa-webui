@@ -81,8 +81,8 @@ public class SubmissionManager extends ManagerThreadMulti
     internalLog.append("Looking for submitted files \r");
     SessionFactory factory = OrganizationManager.getSessionFactory();
     Session session = factory.openSession();
-    Query query = session.createQuery("select distinct(submitterName) from Submission where submissionStatus = ?");
-    query.setParameter(0, Submission.SUBMISSION_STATUS_SUBMITTED);
+    Query query = session.createQuery("select distinct(submitterName) from Submission where submissionStatus = :param1");
+    query.setParameter("param1", Submission.SUBMISSION_STATUS_SUBMITTED);
     List<String> requestNameList = query.list();
 
     internalLog.append("Found " + requestNameList.size() + " submissions waiting for processing \r");

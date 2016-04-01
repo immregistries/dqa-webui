@@ -15,13 +15,7 @@ import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
@@ -30,33 +24,20 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 import org.openimmunizationsoftware.dqa.ProcessLocker;
-import org.openimmunizationsoftware.dqa.SoftwareVersion;
 import org.openimmunizationsoftware.dqa.db.model.Application;
-import org.openimmunizationsoftware.dqa.db.model.BatchActions;
-import org.openimmunizationsoftware.dqa.db.model.BatchCodeReceived;
-import org.openimmunizationsoftware.dqa.db.model.BatchIssues;
-import org.openimmunizationsoftware.dqa.db.model.BatchType;
-import org.openimmunizationsoftware.dqa.db.model.BatchVaccineCvx;
-import org.openimmunizationsoftware.dqa.db.model.IssueAction;
-import org.openimmunizationsoftware.dqa.db.model.IssueFound;
 import org.openimmunizationsoftware.dqa.db.model.KeyedSetting;
-import org.openimmunizationsoftware.dqa.db.model.MessageBatch;
-import org.openimmunizationsoftware.dqa.db.model.MessageReceived;
 import org.openimmunizationsoftware.dqa.db.model.Organization;
-import org.openimmunizationsoftware.dqa.db.model.ReceiveQueue;
 import org.openimmunizationsoftware.dqa.db.model.ReportTemplate;
-import org.openimmunizationsoftware.dqa.db.model.SubmitStatus;
 import org.openimmunizationsoftware.dqa.db.model.SubmitterProfile;
-import org.openimmunizationsoftware.dqa.parse.VaccinationParserHL7;
-import org.openimmunizationsoftware.dqa.quality.QualityCollector;
-import org.openimmunizationsoftware.dqa.quality.QualityReport;
-import org.openimmunizationsoftware.dqa.validate.Validator;
+import org.openimmunizationsoftware.dqa.util.HibernateSessionReporter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FileImportProcessor extends ManagerThread
 {
-
+  private static final Logger LOGGER = LoggerFactory.getLogger(FileImportProcessor.class);
   private FileImportManager fileImportManager = null;
-  private File dir;
+  private File rootDir;
 
   private SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss a");
   private File processingFile = null;
@@ -65,38 +46,46 @@ public class FileImportProcessor extends ManagerThread
   private File receiveDir = null;
   private File submitDir = null;
   private SubmitterProfile profile = null;
-  private VaccinationParserHL7 parser = null;
-  private PrintWriter ackOut;
-  private PrintWriter logOut;
-  private PrintWriter reportOut;
-  private PrintWriter errorsOut;
-  private PrintWriter acceptedOut;
   private String profileCode = null;
-  private QualityCollector qualityCollector = null;
 
+	private int numberOffilesToProcess = 0;
+	private int currentFileNumber = 0;
+	private String currentFileName = "";
+	
+	private boolean active = false;
+	private boolean complete = false;
+	private boolean completedWithErrors = false;
+	private int totalMessages = 0;
+	private long allFilesAverage;
+	
   protected FileImportProcessor(File dir, FileImportManager fileImportManager) {
     super("File Import Processor for " + dir.getName());
+    LOGGER.info("Creating FileImportProcessor for directory : " + dir.getAbsolutePath());
     this.fileImportManager = fileImportManager;
-    this.dir = dir;
+    this.rootDir = dir;
   }
 
   @Override
   public void run()
   {
-    try
+	this.setActive(true);
+	this.setThreadStartMs(System.currentTimeMillis());
+	try
     {
-      internalLog.append("Looking for files to process \n");
+      LOGGER.info(this.rootDir.getName() + " Initiating File Import");
+      dualLogging("Looking for files to process \n");
+      
       KeyedSettingManager ksm = KeyedSettingManager.getKeyedSettingManager();
-      processingFile = new File(dir, "processing.txt");
+      processingFile = new File(rootDir, "processing.txt");
       processingOut = new PrintWriter(new FileWriter(processingFile));
-      createProcessingDirs(ksm, dir);
-      profileCode = dir.getName();
+      createProcessingDirs(ksm, rootDir);
+      profileCode = rootDir.getName();
       SessionFactory factory = OrganizationManager.getSessionFactory();
       Session session = factory.openSession();
       findProfile(profileCode, session);
       if (ksm.getKeyedValueBoolean(KeyedSetting.IN_FILE_EXPORT_CONNECTION_SCRIPT, false))
       {
-        File connectionScriptFile = new File(dir, "connectionScript.txt");
+        File connectionScriptFile = new File(rootDir, "connectionScript.txt");
         PrintWriter out = new PrintWriter(new FileWriter(connectionScriptFile));
         out.println("-----------------------------------------");
         out.println("Connection");
@@ -109,7 +98,9 @@ public class FileImportProcessor extends ManagerThread
         out.close();
       }
       Transaction tx = session.beginTransaction();
+      LOGGER.info("Init PotentialIssueStatus: START");
       profile.initPotentialIssueStatus(session);
+      LOGGER.info("Init PotentialIssueStatus: COMPLETE");
       tx.commit();
       String[] filesToProcess = submitDir.list(new FilenameFilter() {
         public boolean accept(java.io.File dir, String name)
@@ -118,23 +109,40 @@ public class FileImportProcessor extends ManagerThread
           return file.isFile() && file.canRead();
         }
       });
+      
+      this.setNumberOffilesToProcess(filesToProcess.length);
+      
       procLog("Found " + filesToProcess.length + " files to process in " + submitDir.getAbsolutePath());
-      internalLog.append("Found " + filesToProcess.length + " files to process in " + submitDir.getAbsolutePath());
+      dualLogging("Found " + filesToProcess.length + " files to process in " + submitDir.getAbsolutePath());
+      
       for (String filename : filesToProcess)
       {
-        lookToProcessFile(session, filename);
+    	LOGGER.info("Start Processing file: " + filename);
+    	this.currentFileName = filename;
+    	this.currentFileNumber ++;
+        
+    	lookToProcessFile(session, filename);
+    	
+    	LOGGER.info("Completed Processing file: " + filename);
+    	
       }
       session.close();
-      renameProcessLogfile(dir);
+      
+      renameProcessLogfile(rootDir);
+      
+      HibernateSessionReporter.reportSingletonSessionFactoryStats();
+      
     } catch (Exception e)
     {
-      e.printStackTrace();
-      fileImportManager.lastException = e;
-    } finally
-    {
-      // Processing is complete, now remove thread and complete
-      fileImportManager.threads.remove(dir.getName());
-    }
+    	LOGGER.error("Exception processing directory " + this.rootDir.getAbsolutePath(), e);
+        fileImportManager.lastException = e;
+        this.setCompletedWithErrors(true);
+    }  
+	
+	this.setComplete(true);
+   	this.setCompletedWithErrors(this.lastException != null);
+    this.setThreadFinishMs(System.currentTimeMillis());
+    this.fileImportManager.addToMessageAverage(this.totalMessages, this.allFilesAverage);
 
   }
 
@@ -175,8 +183,8 @@ public class FileImportProcessor extends ManagerThread
   private void findProfile(String profileCode, Session session)
   {
     procLog("Looking for submitter profile");
-    Query query = session.createQuery("from SubmitterProfile where profileCode = ?");
-    query.setParameter(0, profileCode);
+    Query query = session.createQuery("from SubmitterProfile where profileCode = :param1");
+    query.setParameter("param1", profileCode);
     List<SubmitterProfile> submitterProfiles = query.list();
     if (submitterProfiles.size() == 0)
     {
@@ -220,7 +228,7 @@ public class FileImportProcessor extends ManagerThread
   {
     File inFile = new File(submitDir, filename);
     procLog("Looking at file " + filename);
-    internalLog.append("Looking at file " + filename);
+    dualLogging("Looking at file " + filename);
     if (inFile.exists() && inFile.canRead() && inFile.length() > 0)
     {
       long timeSinceLastChange = System.currentTimeMillis() - inFile.lastModified();
@@ -230,12 +238,22 @@ public class FileImportProcessor extends ManagerThread
         if (fileCanBeProcessed(inFile))
         {
           procLog("Processing file " + filename);
-          internalLog.append("  + processing file... ");
+          dualLogging("  + processing file... ");
           try
           {
             ProcessLocker.lock(profile);
-            ProcessorCore fileImportProcessorCore = new ProcessorCore(processingOut, this, profile, acceptedDir, receiveDir);
-            fileImportProcessorCore.process(session, filename, inFile);
+            ProcessorCore pc = new ProcessorCore(processingOut, this, profile, acceptedDir, receiveDir);
+            
+            pc.processFile(session, filename, inFile);
+
+            int currentMessages =  pc.getMessageCount();
+            
+            
+            long totalPrevMessageTime = this.getTotalMessages() * this.allFilesAverage;          
+            long currentMessageTime = pc.getMessageCount() * this.getAverageProcessingMs();
+            
+            this.setTotalMessages(this.getTotalMessages() + currentMessages);
+            this.allFilesAverage = (totalPrevMessageTime + currentMessageTime) / this.getTotalMessages();
           } finally
           {
             ProcessLocker.unlock(profile);
@@ -249,12 +267,12 @@ public class FileImportProcessor extends ManagerThread
         procLog("Postponing processing, file changed " + (timeSinceLastChange / 1000) + " seconds ago (will process after 60 seconds has elapsed)");
         procLog(" + current time: " + sdf.format(new Date()));
         procLog(" + changed time: " + sdf.format(inFile.lastModified()));
-        internalLog.append(" + postponing processing, file recently changed");
+        dualLogging(" + postponing processing, file recently changed");
       }
     } else
     {
       procLog("File does not exist or can not be read");
-      internalLog.append(" + file does not exist or can not be read");
+      dualLogging(" + file does not exist or can not be read");
     }
   }
 
@@ -312,144 +330,76 @@ public class FileImportProcessor extends ManagerThread
   {
     processingOut.println(sdf.format(new Date()) + " " + message);
     processingOut.flush();
+    LOGGER.debug("PROC LOG: " + sdf.format(new Date()) + " " + message);
+  }
+  
+  private void dualLogging(String message) {
+	  LOGGER.info(message);
+	  internalLog.append(message);
+  }
+  
+  public String getStatus() {
+		String transferInterfacePin = this.rootDir.getName();
+		
+		if (this.isActive() && !this.isComplete()) {
+//			+ 1200-75-58 RUNNING: File[5 of 75] Name[1200-75-58-20150510.lst] Message[8 of  15]
+			if (this.progressStart == 0) {
+				return String.format(" + %10s STARTING ", transferInterfacePin);
+			}
+			
+			long avgElapsed = this.getAverageProcessingMs();		
+			long threadElapsed = System.currentTimeMillis() - this.getThreadStartMs();
+			return String.format(" + %10s RUNNING: File[%3d of %3d] Name[%23s] Message[%3d of  %3d] MsgAvg[%6d ms]  thread elapsed[%10d s]", transferInterfacePin, this.currentFileNumber, this.getNumberOffilesToProcess(), this.currentFileName, this.getProgressCount(), this.getTotalCount(), avgElapsed, threadElapsed / 1000);
+		} if (this.isComplete()) {
+			return String.format(" + %s PROCESSING COMPLETE - Files[%3d] Messages[%3d] MsgAvg[%6d ms] Elapsed[%10d s]  %s", transferInterfacePin, this.getNumberOffilesToProcess(), this.getTotalMessages(), this.allFilesAverage, ((this.getThreadFinishMs() - this.getThreadStartMs())/1000), (this.completedWithErrors ? " (WITH ERRORS) " : ""));
+		} else {
+			return String.format(" + %s WAITING IN THREAD POOL", transferInterfacePin);
+		}
+		
+	}
+  
+  /**
+   * @return the active
+   */
+  public boolean isActive() {
+  	return active;
   }
 
-  private void processFile(Session session, String filename, File inFile) throws FileNotFoundException, IOException
-  {
-    Date receivedDate = determineReceivedDate(filename);
-    progressStart = System.currentTimeMillis();
-    createMessageBatch(session);
-    BufferedReader in = new BufferedReader(new FileReader(inFile));
-    String line = readRealFirstLine(in);
-    if (line != null && (line.startsWith("MSH") || line.startsWith("FHS") || line.startsWith("BHS")))
-    {
-      StringBuilder message = new StringBuilder();
-      openOutputs(filename);
-      progressCount = 0;
-      do
-      {
-        line = line.trim();
-        acceptedOut.print(line);
-        acceptedOut.print("\r");
-        if (line.startsWith("MSH"))
-        {
-          if (message.length() > 0)
-          {
-            progressCount++;
-            processMessage(message, profile, session, receivedDate);
-          }
-          message.setLength(0);
-        } else if (line.startsWith("FHS") || line.startsWith("BHS") || line.startsWith("BTS") || line.startsWith("FTS"))
-        {
-          continue;
-        }
-        message.append(line);
-        message.append("\r");
-      } while ((line = in.readLine()) != null);
-      if (message.length() > 0)
-      {
-        progressCount++;
-        processMessage(message, profile, session, receivedDate);
-      }
-      printReport(inFile, session);
-      if (progressCount > 0)
-      {
-        saveAndCloseBatch(session);
-      }
-      closeOutputs(acceptedOut);
-    }
-    in.close();
-    inFile.delete();
+  /**
+   * @param active the active to set
+   */
+  public void setActive(boolean active) {
+  	this.active = active;
   }
 
-  private Date determineReceivedDate(String filename)
-  {
-    Date receivedDate = new Date();
-    int pos = filename.indexOf("!");
-    if (pos != -1)
-    {
-      procLog("Filename appears to include received date");
-      pos++;
-      if (pos < filename.length())
-      {
-        String s = filename.substring(pos);
-        pos = s.indexOf('.');
-        if (pos == -1)
-        {
-          pos = filename.length();
-        }
-        if (pos == 8)
-        {
-          SimpleDateFormat fileDate = new SimpleDateFormat("yyyyMMdd");
-          fileDate.setLenient(false);
-          try
-          {
-            receivedDate = fileDate.parse(s.substring(0, pos));
-            if (receivedDate.getTime() > System.currentTimeMillis())
-            {
-              procLog("Unable to set received date in the future, using today's date");
-              receivedDate = new Date();
-            } else
-            {
-              procLog("Setting received date for file to " + sdf.format(receivedDate));
-            }
-          } catch (ParseException pe)
-          {
-            procLog("Tried to set received date from file name but unable to parse date in YYYYMMDD format");
-          }
-        } else
-        {
-          procLog("Expected received date in file but was not available");
-        }
-      }
-    }
-    return receivedDate;
+  /**
+   * @return the complete
+   */
+  public boolean isComplete() {
+  	return complete;
   }
 
-  private void saveAndCloseBatch(Session session)
-  {
-    qualityCollector.close();
-    Transaction tx = session.beginTransaction();
-    MessageBatch messageBatch = qualityCollector.getMessageBatch();
-    messageBatch.setSubmitStatus(SubmitStatus.QUEUED);
-    session.saveOrUpdate(messageBatch);
-    session.saveOrUpdate(messageBatch.getBatchReport());
-    for (BatchIssues batchIssues : messageBatch.getBatchIssuesMap().values())
-    {
-      session.save(batchIssues);
-    }
-    for (BatchActions batchActions : messageBatch.getBatchActionsMap().values())
-    {
-      session.save(batchActions);
-    }
-    for (BatchCodeReceived batchCodeReceived : messageBatch.getBatchCodeReceivedMap().values())
-    {
-      session.save(batchCodeReceived);
-    }
-    for (BatchVaccineCvx batchVaccineCvx : messageBatch.getBatchVaccineCvxMap().values())
-    {
-      session.save(batchVaccineCvx);
-    }
-    tx.commit();
+  /**
+   * @param complete the complete to set
+   */
+  public void setComplete(boolean complete) {
+  	this.complete = complete;
   }
 
-  private void createMessageBatch(Session session)
-  {
-    Transaction tx = session.beginTransaction();
-    qualityCollector = new QualityCollector("File Import", BatchType.SUBMISSION, profile);
-    session.save(qualityCollector.getMessageBatch());
-    tx.commit();
+  /**
+   * @return the completedWithErrors
+   */
+  public boolean isCompletedWithErrors() {
+  	return completedWithErrors;
   }
 
-  private void printReport(File inFile, Session session) throws IOException
-  {
-    Transaction tx = session.beginTransaction();
-    qualityCollector.score();
-    QualityReport qualityReport = new QualityReport(qualityCollector, profile, session, reportOut);
-    qualityReport.setFilename(inFile.getName());
-    qualityReport.printReport();
-    tx.commit();
+  /**
+   * @param completedWithErrors the completedWithErrors to set
+   */
+  public void setCompletedWithErrors(boolean completedWithErrors) {
+  	this.completedWithErrors = completedWithErrors;
   }
+  
 
   /**
    * Reads the first lines of the file until it comes to a non empty line. This
@@ -474,241 +424,33 @@ public class FileImportProcessor extends ManagerThread
     return line;
   }
 
-  private void openOutputs(String filename) throws IOException
-  {
-    File outFile = new File(acceptedDir, filename);
-    acceptedOut = new PrintWriter(new FileWriter(outFile, true));
-    ackOut = new PrintWriter(new FileWriter(new File(receiveDir, filename + ".ack.hl7")));
-    logOut = new PrintWriter(new FileWriter(new File(receiveDir, filename + ".log.txt")));
-    reportOut = new PrintWriter(new FileWriter(new File(receiveDir, filename + ".report.html")));
-    errorsOut = new PrintWriter(new FileWriter(new File(receiveDir, filename + ".errors.txt")));
-  }
+/**
+ * @return the numberOffilesToProcess
+ */
+public int getNumberOffilesToProcess() {
+	return numberOffilesToProcess;
+}
 
-  private void closeOutputs(PrintWriter acceptedOut)
-  {
-    long progressEnd = System.currentTimeMillis();
-    logOut.println("Processing Complete");
-    logOut.println("Start Time:       " + sdf.format(new Date(progressStart)));
-    logOut.println("End Time:         " + sdf.format(new Date(progressEnd)));
-    logOut.println("Message Count:    " + progressCount);
-    logOut.println("Message/Second:   " + ((float) progressCount) / ((progressEnd - progressStart) / 1000.0));
-    logOut.println("Software Label:   " + KeyedSettingManager.getApplication().getApplicationLabel());
-    logOut.println("Software Type:    " + KeyedSettingManager.getApplication().getApplicationType());
-    logOut.println("Software Version: " + SoftwareVersion.VENDOR + " " + SoftwareVersion.PRODUCT + " " + SoftwareVersion.VERSION + " "
-        + SoftwareVersion.BINARY_ID);
-    logOut.println("Software Release: " + SoftwareVersion.RELEASE_DATE);
-    acceptedOut.close();
-    ackOut.close();
-    logOut.close();
-    reportOut.close();
-    errorsOut.close();
-    progressStart = 0;
-    progressCount = 0;
-  }
+/**
+ * @param numberOffilesToProcess the numberOffilesToProcess to set
+ */
+public void setNumberOffilesToProcess(int numberOffilesToProcess) {
+	this.numberOffilesToProcess = numberOffilesToProcess;
+}
 
-  private void processMessage(StringBuilder message, SubmitterProfile profile, Session session, Date receivedDate)
-  {
-    Transaction tx = session.beginTransaction();
-    try
-    {
-      MessageReceived messageReceived = new MessageReceived();
-      messageReceived.setReceivedDate(receivedDate);
-      messageReceived.setProfile(profile);
-      messageReceived.setRequestText(message.toString());
+/**
+ * @return the totalMessages
+ */
+public int getTotalMessages() {
+	return totalMessages;
+}
 
-      parser.createVaccinationUpdateMessage(messageReceived);
-      if (!messageReceived.hasErrors())
-      {
-        Validator validator = new Validator(profile, session);
-        validator.validateVaccinationUpdateMessage(messageReceived, qualityCollector);
-      }
-      IssueAction issueAction = determineIssueAction(messageReceived);
-      messageReceived.setIssueAction(issueAction);
-      qualityCollector.registerProcessedMessage(messageReceived);
+/**
+ * @param totalMessages the totalMessages to set
+ */
+public void setTotalMessages(int totalMessages) {
+	this.totalMessages = totalMessages;
+}
 
-      String ackMessage = parser.makeAckMessage(messageReceived);
-      messageReceived.setResponseText(ackMessage);
-      MessageReceivedManager.saveMessageReceived(profile, messageReceived, session);
-      saveInQueue(session, messageReceived);
-      // profile.saveCodesReceived(session);
-      ackOut.print(ackMessage);
-      printLogDetails(message, messageReceived, logOut, false);
-      if (issueAction.isError())
-      {
-        printLogDetails(message, messageReceived, errorsOut, true);
-      }
-      tx.commit();
-    } catch (Throwable exception)
-    {
-      tx.rollback();
-      String ackMessage = "MSH|^~\\&|||||201105231008000||ACK^|201105231008000|P|2.3.1|\r" + "MSA|AE|TODO|Exception occurred: "
-          + exception.getMessage() + "|\r";
-      ackOut.print(ackMessage);
-      exception.printStackTrace(processingOut);
-      exception.printStackTrace(logOut);
-      exception.printStackTrace(errorsOut);
-      exception.printStackTrace(reportOut);
-    }
-    session.flush();
-    session.clear();
-  }
-
-  private IssueAction determineIssueAction(MessageReceived messageReceived)
-  {
-    IssueAction issueAction;
-    if (messageReceived.getPatient().isSkipped())
-    {
-      issueAction = IssueAction.SKIP;
-    } else if (messageReceived.hasErrors())
-    {
-      issueAction = IssueAction.ERROR;
-    } else if (messageReceived.hasWarns())
-    {
-      issueAction = IssueAction.WARN;
-    } else
-    {
-      issueAction = IssueAction.ACCEPT;
-    }
-    return issueAction;
-  }
-
-  private void saveInQueue(Session session, MessageReceived messageReceived)
-  {
-    ReceiveQueue receiveQueue = new ReceiveQueue();
-    receiveQueue.setMessageBatch(qualityCollector.getMessageBatch());
-    receiveQueue.setMessageReceived(messageReceived);
-    receiveQueue.setSubmitStatus(messageReceived.hasErrors() ? SubmitStatus.EXCLUDED : SubmitStatus.QUEUED);
-    messageReceived.setSubmitStatus(receiveQueue.getSubmitStatus());
-    session.save(receiveQueue);
-  }
-
-  private void printLogDetails(StringBuilder message, MessageReceived messageReceived, PrintWriter out, boolean printDetails)
-  {
-    try
-    {
-      out.println("Message " + progressCount);
-      out.println(message);
-      List<IssueFound> issuesFound = messageReceived.getIssuesFound();
-      boolean first = true;
-      for (IssueFound issueFound : issuesFound)
-      {
-        if (issueFound.isError())
-        {
-          if (first)
-          {
-            out.println("Errors:");
-            first = false;
-          }
-          out.println(" + " + issueFound.getDisplayText());
-        }
-      }
-      first = true;
-      for (IssueFound issueFound : issuesFound)
-      {
-        if (issueFound.isWarn())
-        {
-          if (first)
-          {
-            out.println("Warnings:");
-            first = false;
-          }
-          out.println(" + " + issueFound.getDisplayText());
-        }
-      }
-      first = true;
-      for (IssueFound issueFound : issuesFound)
-      {
-        if (issueFound.isSkip())
-        {
-          if (first)
-          {
-            out.println("Skip:");
-            first = false;
-          }
-          out.println(" + " + issueFound.getDisplayText());
-        }
-      }
-      if (printDetails)
-      {
-        out.println("Message Data: ");
-        printBean(out, messageReceived, "  ");
-      }
-      out.format("Current processing speed: %.2f messages/second", ((float) progressCount) / ((System.currentTimeMillis() - progressStart) / 1000.0));
-
-      out.println();
-      out.println();
-    } catch (Exception e)
-    {
-      e.printStackTrace(out);
-    }
-  }
-
-  private static List<String> printBean(PrintWriter out, Object object, String indent) throws IllegalAccessException, InvocationTargetException
-  {
-    List<String> thisPrinted = new ArrayList<String>();
-    List<String> subPrinted = new ArrayList<String>();
-    Method[] methods = object.getClass().getMethods();
-    Arrays.sort(methods, new Comparator<Method>() {
-      public int compare(Method o1, Method o2)
-      {
-        return o1.getName().compareTo(o2.getName());
-      }
-    });
-    for (Method method : methods)
-    {
-      if (method.getName().startsWith("get") && !method.getName().equals("getClass") && !method.getName().equals("getMessageReceived")
-          && !method.getName().equals("getProfile") && !method.getName().equals("getTableType") && !method.getName().equals("getCodeReceived")
-          && !method.getName().equals("getRequestText") && !method.getName().equals("getResponseText") && !method.getName().equals("getIssuesFound")
-          && !method.getReturnType().equals(Void.TYPE) && method.getParameterTypes().length == 0)
-      {
-        Object returnValue = method.invoke(object);
-        String fieldName = method.getName().substring(3);
-        if (returnValue == null || subPrinted.contains(fieldName))
-        {
-          // do nothing
-        } else if (method.getReturnType() == String.class)
-        {
-          if (!((String) returnValue).equals(""))
-          {
-            out.print(indent);
-            out.print(fieldName);
-            out.print(" = '");
-            out.print(returnValue);
-            out.println("'");
-            thisPrinted.add(fieldName);
-          }
-        } else if (method.getReturnType() == Date.class)
-        {
-          out.print(indent);
-          out.print(fieldName);
-          SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy");
-          out.print(" = ");
-          out.println(sdf.format((Date) returnValue));
-          thisPrinted.add(fieldName);
-        } else if (method.getReturnType() == List.class)
-        {
-          List list = (List) returnValue;
-          for (int i = 0; i < list.size(); i++)
-          {
-            out.print(indent);
-            out.print(fieldName);
-            out.print(" #");
-            out.println(i + 1);
-            printBean(out, list.get(i), indent + "  ");
-          }
-        } else
-        {
-          out.print(indent);
-          out.println(fieldName);
-          List<String> returnPrints = printBean(out, returnValue, indent + "  ");
-          for (String returnPrint : returnPrints)
-          {
-            subPrinted.add(fieldName + returnPrint);
-          }
-        }
-      }
-    }
-    return thisPrinted;
-  }
 
 }

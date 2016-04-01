@@ -84,7 +84,7 @@ public class DatabaseCleanupManager extends ManagerThread
         Date now = new Date();
         if (enabled && (dayOfWeekToday == databaseCleanupDay) && processingStartTime.before(now) && processingEndTime.after(now))
         {
-          runNow(now);
+          runForDate(now);
         } else
         {
           internalLog.append("Database Cleanup will not run now\r");
@@ -111,7 +111,7 @@ public class DatabaseCleanupManager extends ManagerThread
   }
 
   @Override
-  public void runNow(Date now)
+  public void runForDate(Date now)
   {
     setDeleteBefore(now);
     SessionFactory factory = OrganizationManager.getSessionFactory();
@@ -127,14 +127,14 @@ public class DatabaseCleanupManager extends ManagerThread
       do
       {
         count = 0;
-        Query query = session.createQuery("from Submission where submissionStatusDate < ?");
-        query.setParameter(0, deleteBeforeSubmissions);
+        Query query = session.createQuery("from Submission where submissionStatusDate < :param1");
+        query.setParameter("param1", deleteBeforeSubmissions);
         List<Submission> submissionList = query.list();
         for (Submission submission : submissionList)
         {
           Transaction tx = session.beginTransaction();
-          query = session.createQuery("from SubmissionAnalysis where submission = ?");
-          query.setParameter(0, submission);
+          query = session.createQuery("from SubmissionAnalysis where submission = :param1");
+          query.setParameter("param1", submission);
           List<SubmissionAnalysis> submissionAnalysisList = query.list();
           for (SubmissionAnalysis submissionAnalysis : submissionAnalysisList)
           {
@@ -158,56 +158,56 @@ public class DatabaseCleanupManager extends ManagerThread
     do
     {
       count = 0;
-      Query query = session.createQuery("from MessageBatch where endDate < ?");
-      query.setParameter(0, deleteBefore);
+      Query query = session.createQuery("from MessageBatch where endDate < :param1");
+      query.setParameter("param1", deleteBefore);
       query.setMaxResults(1000);
       List<MessageBatch> messageBatchList = query.list();
       for (MessageBatch messageBatch : messageBatchList)
       {
         Transaction tx = session.beginTransaction();
 
-        query = session.createQuery("from ReceiveQueue where messageBatch = ? ");
-        query.setParameter(0, messageBatch);
+        query = session.createQuery("from ReceiveQueue where messageBatch = :param1 ");
+        query.setParameter("param1", messageBatch);
         List<ReceiveQueue> receiveQueueList = query.list();
         for (ReceiveQueue receiveQueue : receiveQueueList)
         {
           session.delete(receiveQueue);
         }
 
-        query = session.createQuery("from BatchIssues where messageBatch = ? ");
-        query.setParameter(0, messageBatch);
+        query = session.createQuery("from BatchIssues where messageBatch = :param1 ");
+        query.setParameter("param1", messageBatch);
         List<BatchIssues> batchIssuesList = query.list();
         for (BatchIssues batchIssues : batchIssuesList)
         {
           session.delete(batchIssues);
         }
 
-        query = session.createQuery("from BatchCodeReceived where messageBatch = ? ");
-        query.setParameter(0, messageBatch);
+        query = session.createQuery("from BatchCodeReceived where messageBatch = :param1 ");
+        query.setParameter("param1", messageBatch);
         List<BatchCodeReceived> batchCodeReceivedList = query.list();
         for (BatchCodeReceived batchCodeReceived : batchCodeReceivedList)
         {
           session.delete(batchCodeReceived);
         }
 
-        query = session.createQuery("from BatchActions where messageBatch = ? ");
-        query.setParameter(0, messageBatch);
+        query = session.createQuery("from BatchActions where messageBatch = :param1 ");
+        query.setParameter("param1", messageBatch);
         List<BatchActions> batchActionsList = query.list();
         for (BatchActions batchActions : batchActionsList)
         {
           session.delete(batchActions);
         }
 
-        query = session.createQuery("from BatchVaccineCvx where messageBatch = ? ");
-        query.setParameter(0, messageBatch);
+        query = session.createQuery("from BatchVaccineCvx where messageBatch = :param1 ");
+        query.setParameter("param1", messageBatch);
         List<BatchVaccineCvx> batchVaccineCvxList = query.list();
         for (BatchVaccineCvx batchVaccineCvx : batchVaccineCvxList)
         {
           session.delete(batchVaccineCvx);
         }
 
-        query = session.createQuery("from BatchReport where messageBatch = ? ");
-        query.setParameter(0, messageBatch);
+        query = session.createQuery("from BatchReport where messageBatch = :param1 ");
+        query.setParameter("param1", messageBatch);
         List<BatchReport> batchReportList = query.list();
         for (BatchReport batchReportCvx : batchReportList)
         {
@@ -229,8 +229,8 @@ public class DatabaseCleanupManager extends ManagerThread
     do
     {
       count = 0;
-      Query query = session.createQuery("from MessageReceived where receivedDate < ?");
-      query.setParameter(0, deleteBeforeMessageAnalysis);
+      Query query = session.createQuery("from MessageReceived where receivedDate < :param1");
+      query.setParameter("param1", deleteBeforeMessageAnalysis);
       query.setMaxResults(1000);
       List<MessageReceived> messageReceivedList = query.list();
       count = 0;
@@ -240,16 +240,16 @@ public class DatabaseCleanupManager extends ManagerThread
         deleteMessageData(session, messageReceived);
 
         Transaction tx = session.beginTransaction();
-        query = session.createQuery("from IssueFound where messageReceived = ? ");
-        query.setParameter(0, messageReceived);
+        query = session.createQuery("from IssueFound where messageReceived = :param1 ");
+        query.setParameter("param1", messageReceived);
         List<IssueFound> issueFoundList = query.list();
         for (IssueFound issueFound : issueFoundList)
         {
           session.delete(issueFound);
         }
 
-        query = session.createQuery("from ReceiveQueue where messageReceived = ? ");
-        query.setParameter(0, messageReceived);
+        query = session.createQuery("from ReceiveQueue where messageReceived = :param1 ");
+        query.setParameter("param1", messageReceived);
         List<ReceiveQueue> receiveQueueList = query.list();
         for (ReceiveQueue receiveQueue : receiveQueueList)
         {
@@ -272,8 +272,8 @@ public class DatabaseCleanupManager extends ManagerThread
     do
     {
       count = 0;
-      Query query = session.createQuery("from MessageReceived where receivedDate < ? and requestText is not null");
-      query.setParameter(0, deleteBeforeMessageText);
+      Query query = session.createQuery("from MessageReceived where receivedDate < :param1 and requestText is not null");
+      query.setParameter("param1", deleteBeforeMessageText);
       query.setMaxResults(1000);
       List<MessageReceived> messageReceivedList = query.list();
       count = 0;
@@ -296,8 +296,8 @@ public class DatabaseCleanupManager extends ManagerThread
        do
     {
       count = 0;
-      Query query = session.createQuery("from Patient where messageReceived.receivedDate < ?");
-      query.setParameter(0, deleteBeforeDataFields);
+      Query query = session.createQuery("from Patient where messageReceived.receivedDate < :param1");
+      query.setParameter("param1", deleteBeforeDataFields);
       query.setMaxResults(1000);
       List<Patient> patientList = query.list();
       count = 0;
@@ -315,8 +315,8 @@ public class DatabaseCleanupManager extends ManagerThread
     Query query;
     Transaction tx = session.beginTransaction();
     
-    query = session.createQuery("from NextOfKin where messageReceived = ?");
-    query.setParameter(0, messageReceived);
+    query = session.createQuery("from NextOfKin where messageReceived = :param1");
+    query.setParameter("param1", messageReceived);
     List<NextOfKin> nextOfKinList = query.list();
     for (NextOfKin nextOfKin : nextOfKinList)
     {
@@ -325,16 +325,16 @@ public class DatabaseCleanupManager extends ManagerThread
 
     tx.commit();
     
-    query = session.createQuery("from Vaccination where messageReceived = ?");
-    query.setParameter(0, messageReceived);
+    query = session.createQuery("from Vaccination where messageReceived = :param1");
+    query.setParameter("param1", messageReceived);
     List<Vaccination> vaccinationList = query.list();
     for (Vaccination vaccination : vaccinationList)
     {
       deleteVaccination(session, vaccination);
     }
 
-    query = session.createQuery("from Patient where messageReceived = ?");
-    query.setParameter(0, messageReceived);
+    query = session.createQuery("from Patient where messageReceived = :param1");
+    query.setParameter("param1", messageReceived);
     List<Patient> patientList = query.list();
     for (Patient patient : patientList)
     {
@@ -346,29 +346,29 @@ public class DatabaseCleanupManager extends ManagerThread
   {
     Query query;
     Transaction tx = session.beginTransaction();
-    query = session.createQuery("from PatientIdNumber where patient = ?");
-    query.setParameter(0, patient);
+    query = session.createQuery("from PatientIdNumber where patient = :param1");
+    query.setParameter("param1", patient);
     List<PatientIdNumber> patientIdNumberList = query.list();
     for (PatientIdNumber patientIdNumber : patientIdNumberList)
     {
       session.delete(patientIdNumber);
     }
-    query = session.createQuery("from PatientPhone where patient = ?");
-    query.setParameter(0, patient);
+    query = session.createQuery("from PatientPhone where patient = :param1");
+    query.setParameter("param1", patient);
     List<PatientPhone> patientPhoneList = query.list();
     for (PatientPhone patientPhone : patientPhoneList)
     {
       session.delete(patientPhone);
     }
-    query = session.createQuery("from PatientAddress where patient = ?");
-    query.setParameter(0, patient);
+    query = session.createQuery("from PatientAddress where patient = :param1");
+    query.setParameter("param1", patient);
     List<PatientAddress> patientAddressList = query.list();
     for (PatientAddress patientAddress : patientAddressList)
     {
       session.delete(patientAddress);
     }
-    query = session.createQuery("from PatientImmunity where patient = ?");
-    query.setParameter(0, patient);
+    query = session.createQuery("from PatientImmunity where patient = :param1");
+    query.setParameter("param1", patient);
     List<PatientImmunity> patientImmunityList = query.list();
     for (PatientImmunity patientImmunity : patientImmunityList)
     {
@@ -383,8 +383,8 @@ public class DatabaseCleanupManager extends ManagerThread
   {
     Query query;
     Transaction tx = session.beginTransaction();
-    query = session.createQuery("from VaccinationVIS where vaccination = ? ");
-    query.setParameter(0, vaccination);
+    query = session.createQuery("from VaccinationVIS where vaccination = :param1 ");
+    query.setParameter("param1", vaccination);
     List<VaccinationVIS> vaccinationVISList = query.list();
     for (VaccinationVIS vaccinationVIS : vaccinationVISList)
     {

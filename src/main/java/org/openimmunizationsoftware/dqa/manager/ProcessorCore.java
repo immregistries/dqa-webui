@@ -1,6 +1,6 @@
 /*
- * Copyright 2013 by Dandelion Software & Research, Inc (DSR)
  * 
+ * Copyright 2013 by Dandelion Software & Research, Inc (DSR)
  * This application was written for immunization information system (IIS) community and has
  * been released by DSR under an Apache 2 License with the hope that this software will be used
  * to improve Public Health.  
@@ -22,13 +22,13 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.hibernate.Hibernate;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.openimmunizationsoftware.dqa.SoftwareVersion;
@@ -51,14 +51,16 @@ import org.openimmunizationsoftware.dqa.quality.AnalysisReport;
 import org.openimmunizationsoftware.dqa.quality.QualityCollector;
 import org.openimmunizationsoftware.dqa.quality.QualityReport;
 import org.openimmunizationsoftware.dqa.validate.Validator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ProcessorCore
 {
-
+  private static final Logger LOGGER = LoggerFactory.getLogger(ProcessorCore.class);
   private static final String ASC_LINE_START = "Patient|";
   private SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss a");
   private PrintWriter processingOut = null;
-  private ManagerThread thread = null;
+  private ManagerThread managingThread = null;
   private QualityCollector qualityCollector = null;
   private File ackFile;
   private File reportFile;
@@ -76,8 +78,12 @@ public class ProcessorCore
   private File acceptedDir = null;
   private File receiveDir = null;
   private Submission submission = null;
-  private Session session = null;
-
+  private Session instanceSession = null;
+  
+  private int messageCount = 0;
+  private String currentFileName;
+private long messageProcessingStartTime;
+  
   public File getLogFile()
   {
     return logFile;
@@ -115,12 +121,12 @@ public class ProcessorCore
 
   public ManagerThread getThread()
   {
-    return thread;
+    return managingThread;
   }
 
   public void setThread(ManagerThread thread)
   {
-    this.thread = thread;
+    this.managingThread = thread;
   }
 
   public QualityCollector getQualityCollector()
@@ -175,36 +181,43 @@ public class ProcessorCore
 
   public ProcessorCore(PrintWriter processingOut, ManagerThread thread, SubmitterProfile profile, File acceptedDir, File receiveDir) {
     this.processingOut = processingOut;
-    this.thread = thread;
+    this.managingThread = thread;
     this.profile = profile;
     this.acceptedDir = acceptedDir;
     this.receiveDir = receiveDir;
   }
 
-  public ProcessorCore(PrintWriter processingOut, ManagerThread thread, SubmitterProfile profile, Submission submission, Session session) {
+  public ProcessorCore(PrintWriter processingOut, ManagerThread thread, SubmitterProfile profile, Submission submission, Session sessionIn) {
     this.processingOut = processingOut;
-    this.thread = thread;
+    this.managingThread = thread;
     this.profile = profile;
     this.submission = submission;
-    this.session = session;
+    this.instanceSession = sessionIn;
   }
 
-  public void process(Session session, String filename, File inFile) throws FileNotFoundException, IOException
+  public void processFile(Session sessionIn, String filename, File inFile) throws FileNotFoundException, IOException
   {
-    Reader inReader = new FileReader(inFile);
-    processIn(session, filename, inReader);
+	this.setMessageCount(countMessages(inFile));
+    processCharacterStream(sessionIn, filename, new FileReader(inFile));
     inFile.delete();
   }
 
-  public void processIn(Session session, String filename, Reader inReader) throws IOException
+  public void processCharacterStream(Session sessionIn, String filename, Reader inReader) throws IOException
   {
-
-    BufferedReader in = new BufferedReader(inReader);
+	this.currentFileName = filename;
+    
+	BufferedReader in = new BufferedReader(inReader);
 
     procLog("Starting file processing");
+    
     Date receivedDate = determineReceivedDate(filename);
-    thread.setProgressStart(System.currentTimeMillis());
-    createMessageBatch(session);
+    
+    this.managingThread.setProgressStart(System.currentTimeMillis());
+    this.managingThread.setTotalCount(getMessageCount());
+    this.managingThread.setProgressCount(0);
+    this.managingThread.setAverageProcessingMs(0);
+    
+    createMessageBatch(sessionIn);
 
     String line = readRealFirstLine(in);
     if (line != null && (line.startsWith("MSH") || line.startsWith("FHS") || line.startsWith("BHS") || line.startsWith(ASC_LINE_START)))
@@ -212,7 +225,10 @@ public class ProcessorCore
       String previousLineStart = "*******";
       StringBuilder message = new StringBuilder();
       openOutputs(filename);
-      thread.setProgressCount(0);
+      managingThread.setProgressCount(0);
+      
+      this.messageProcessingStartTime = Calendar.getInstance().getTimeInMillis();
+      
       do
       {
         line = line.trim();
@@ -225,7 +241,7 @@ public class ProcessorCore
         {
           if (message.length() > 0)
           {
-            processMessage(message, profile, session, receivedDate);
+            processMessage(message.toString(), profile, sessionIn, receivedDate);
           }
           message.setLength(0);
         } else if (line.startsWith("FHS") || line.startsWith("BHS") || line.startsWith("BTS") || line.startsWith("FTS"))
@@ -245,17 +261,33 @@ public class ProcessorCore
             previousLineStart = line.substring(0, pos) + "|";
           }
         }
+        
       } while ((line = in.readLine()) != null);
 
+      //Get the last one... if it exists. 
       if (message.length() > 0)
       {
-        processMessage(message, profile, session, receivedDate);
+        processMessage(message.toString(), profile, sessionIn, receivedDate);
       }
-      printReport(filename, session);
-      if (thread.getProgressCount() > 0)
+      long messageProcessingEndTime = Calendar.getInstance().getTimeInMillis();
+      
+      long totalProcessingTime = messageProcessingEndTime - messageProcessingStartTime;
+      
+      long averageMessageTime = (totalProcessingTime / this.messageCount);
+      this.managingThread.setAverageProcessingMs(averageMessageTime);
+      LOGGER.info("MESSAGE PROCESSING took {}ms for {} messages with an average of {}ms per message", new Object[] {totalProcessingTime, this.messageCount, averageMessageTime});
+      
+      procLog("Finished processing messages, printing report. ");
+      LOGGER.info("Starting report processing! {}", Thread.currentThread().getName());
+      long reportStartTime = Calendar.getInstance().getTimeInMillis();
+      printReport(filename, sessionIn);
+      long reportEndTime = Calendar.getInstance().getTimeInMillis();
+      LOGGER.info("Report Processing took {} ms for a total of {} messages {}", new Object[] {(reportEndTime - reportStartTime), this.messageCount, Thread.currentThread().getName()});
+      
+      if (managingThread.getProgressCount() > 0)
       {
         procLog("Finished processing messages, saving submission batch");
-        saveAndCloseBatch(session);
+        saveAndCloseBatch(sessionIn);
       } else
       {
         procLog("No messages found to process.");
@@ -277,11 +309,12 @@ public class ProcessorCore
     transaction.commit();
   }
 
-  private void processMessage(StringBuilder message, SubmitterProfile profile, Session session, Date receivedDate)
+  private void processMessage(String messageString, SubmitterProfile profile, Session session, Date receivedDate)
   {
-    String messageString = message.toString();
-    thread.incProgressCount();
-    procLog("Processing message " + thread.getProgressCount());
+    managingThread.incProgressCount();
+
+    long processMessageStart = System.currentTimeMillis();
+    procLog("Processing message " + managingThread.getProgressCount() + " of " + this.getMessageCount());
 
     if (submission != null)
     {
@@ -304,12 +337,16 @@ public class ProcessorCore
         Validator validator = new Validator(profile, session);
         validator.validateVaccinationUpdateMessage(messageReceived, qualityCollector);
       }
+      
       IssueAction issueAction = determineIssueAction(messageReceived);
       messageReceived.setIssueAction(issueAction);
       qualityCollector.registerProcessedMessage(messageReceived);
 
       String ackMessage = parser.makeAckMessage(messageReceived);
       messageReceived.setResponseText(ackMessage);
+      
+      identifyingLOGGER("SAVING MESSAGE RECEIVED");
+      
       MessageReceivedManager.saveMessageReceived(profile, messageReceived, session);
       saveInQueue(session, messageReceived);
       // profile.saveCodesReceived(session);
@@ -319,21 +356,26 @@ public class ProcessorCore
       }
       if (logOut != null)
       {
-        printLogDetails(message, messageReceived, logOut, false);
+        printLogDetails(messageString, messageReceived, logOut, false);
       }
       if (issueAction.isError())
       {
         if (errorsOut != null)
         {
-          printLogDetails(message, messageReceived, errorsOut, true);
+          printLogDetails(messageString, messageReceived, errorsOut, true);
         }
         procLog(" + REJECTED ");
       }
-
+      
+      
+//      session.flush();  a commit is the same as flush+commit
+      identifyingLOGGER("COMMITING SESSION ");
       tx.commit();
+      
     } catch (Throwable exception)
     {
       procLog(" + EXCEPTION: " + exception.getMessage());
+      LOGGER.error("Exception processing files \\r" + exception.getMessage(), exception);
       exception.printStackTrace();
       tx.rollback();
       String ackMessage = "MSH|^~\\&|||||201105231008000||ACK^|201105231008000|P|2.3.1|\r" + "MSA|AE|TODO|Exception occurred: "
@@ -355,9 +397,17 @@ public class ProcessorCore
       {
         exception.printStackTrace(reportOut);
       }
+      managingThread.lastException = exception;
     }
-    session.flush();
+    
     session.clear();
+    
+    long processMessageFinish = System.currentTimeMillis();
+    LOGGER.info("PROCESS MESSAGE " + this.profile.getProfileCode() + " #" + this.managingThread.progressCount + " took " + (processMessageFinish - processMessageStart) + " ms");
+  
+    if (this.managingThread.getProgressCount() > 0) {
+    	this.managingThread.setAverageProcessingMs(((Calendar.getInstance().getTimeInMillis() - this.messageProcessingStartTime) / this.managingThread.progressCount));
+    }
   }
 
   private Date determineReceivedDate(String filename)
@@ -439,6 +489,12 @@ public class ProcessorCore
   {
     processingOut.println(sdf.format(new Date()) + " " + message);
     processingOut.flush();
+    
+    LOGGER.info("PROC LOG: - {} file:{} msg#{} procMsg: {}", new Object[] {this.profile.getProfileCode(), this.currentFileName, String.valueOf(this.managingThread.progressCount), message});
+  }
+  
+  private void identifyingLOGGER(String message) {
+	  LOGGER.trace("{} file:{} msg#{} " + message, new Object[] {profile.getProfileCode() , this.currentFileName , this.managingThread.progressCount});
   }
 
   protected void openOutputs(String filename) throws IOException
@@ -454,7 +510,7 @@ public class ProcessorCore
       analysisDir = new File(receiveDir, filename + ".analysis");
     } else
     {
-      String prefix = profile.getProfileId() + "." + submission.getRequestName();
+      String prefix = profile.getProfileCode() + "." + submission.getRequestName();
       outFile = null;
       ackFile = submission.isReturnResponse() ? File.createTempFile(prefix, ".ack.hl7") : null;
       logFile = submission.isReturnDetailLog() ? File.createTempFile(prefix, ".log.hl7") : null;
@@ -534,27 +590,30 @@ public class ProcessorCore
   {
     qualityCollector.close();
     Transaction tx = session.beginTransaction();
-    MessageBatch messageBatch = qualityCollector.getMessageBatch();
-    messageBatch.setSubmitStatus(SubmitStatus.QUEUED);
-    session.saveOrUpdate(messageBatch);
-    session.saveOrUpdate(messageBatch.getBatchReport());
-    for (BatchIssues batchIssues : messageBatch.getBatchIssuesMap().values())
-    {
-      session.save(batchIssues);
-    }
-    for (BatchActions batchActions : messageBatch.getBatchActionsMap().values())
-    {
-      session.save(batchActions);
-    }
-    for (BatchCodeReceived batchCodeReceived : messageBatch.getBatchCodeReceivedMap().values())
-    {
-      session.save(batchCodeReceived);
-    }
-    for (BatchVaccineCvx batchVaccineCvx : messageBatch.getBatchVaccineCvxMap().values())
-    {
-      session.save(batchVaccineCvx);
-    }
-    tx.commit();
+	try {
+		MessageBatch messageBatch = qualityCollector.getMessageBatch();
+		messageBatch.setSubmitStatus(SubmitStatus.QUEUED);
+		session.saveOrUpdate(messageBatch);
+		session.saveOrUpdate(messageBatch.getBatchReport());
+		for (BatchIssues batchIssues : messageBatch.getBatchIssuesMap().values()) {
+			session.save(batchIssues);
+		}
+		for (BatchActions batchActions : messageBatch.getBatchActionsMap().values()) {
+			session.save(batchActions);
+		}
+		for (BatchCodeReceived batchCodeReceived : messageBatch.getBatchCodeReceivedMap().values()) {
+			session.save(batchCodeReceived);
+		}
+		for (BatchVaccineCvx batchVaccineCvx : messageBatch.getBatchVaccineCvxMap().values()) {
+			session.save(batchVaccineCvx);
+		}
+		tx.commit();
+	} catch (Throwable exception) {
+		session.clear();
+		tx.rollback();
+		procLog(" + EXCEPTION saving batch: " + exception.getCause().getMessage());
+		LOGGER.error(exception.getMessage());
+	}
   }
 
   private void closeOutputs() throws IOException
@@ -563,10 +622,10 @@ public class ProcessorCore
     if (logOut != null)
     {
       logOut.println("Processing Complete");
-      logOut.println("Start Time:       " + sdf.format(new Date(thread.getProgressStart())));
+      logOut.println("Start Time:       " + sdf.format(new Date(managingThread.getProgressStart())));
       logOut.println("End Time:         " + sdf.format(new Date(progressEnd)));
-      logOut.println("Message Count:    " + thread.getProgressCount());
-      logOut.println("Message/Second:   " + ((float) thread.getProgressCount()) / ((progressEnd - thread.getProgressStart()) / 1000.0));
+      logOut.println("Message Count:    " + managingThread.getProgressCount());
+      logOut.println("Message/Second:   " + ((float) managingThread.getProgressCount()) / ((progressEnd - managingThread.getProgressStart()) / 1000.0));
       logOut.println("Software Label:   " + KeyedSettingManager.getApplication().getApplicationLabel());
       logOut.println("Software Type:    " + KeyedSettingManager.getApplication().getApplicationType());
       logOut.println("Software Version: " + SoftwareVersion.VENDOR + " " + SoftwareVersion.PRODUCT + " " + SoftwareVersion.VERSION + " "
@@ -593,12 +652,12 @@ public class ProcessorCore
     {
       errorsOut.close();
     }
-    thread.setProgressStart(0);
-    thread.setProgressEnd(0);
+    managingThread.setProgressStart(0);
+    managingThread.setProgressEnd(0);
     if (submission != null)
     {
       submission.setBatch(qualityCollector.getMessageBatch());
-      Transaction transaction = session.beginTransaction();
+      Transaction transaction = instanceSession.beginTransaction();
       FileReader ackReader = null;
       FileReader errorReader = null;
       FileReader logReader = null;
@@ -607,34 +666,33 @@ public class ProcessorCore
       if (ackOut != null)
       {
         ackReader = new FileReader(ackFile);
-        submission.setResponseContent(Hibernate.createClob(ackReader, ackFile.length(), session));
+        submission.setResponseContent(createClob(ackReader, ackFile.length()));
       }
       if (errorsOut != null)
       {
         errorReader = new FileReader(errorsFile);
-        submission.setResponseDetailError(Hibernate.createClob(errorReader, errorsFile.length(), session));
+        submission.setResponseDetailError(createClob(errorReader, errorsFile.length()));
       }
       if (logOut != null)
       {
         logReader = new FileReader(logFile);
-        submission.setResponseDetailLog(Hibernate.createClob(logReader, logFile.length(), session));
+        submission.setResponseDetailLog(createClob(logReader, logFile.length()));
       }
       if (reportOut != null)
       {
         reportReader = new FileReader(reportFile);
-        submission.setResponseReport(Hibernate.createClob(reportReader, reportFile.length(), session));
+        submission.setResponseReport(createClob(reportReader, reportFile.length()));
       }
       if (analysisFile != null)
       {
         analysisReader = new FileReader(analysisFile);
-        submission.setResponseAnalysis(Hibernate.createClob(analysisReader, analysisFile.length(), session));
+        submission.setResponseAnalysis(createClob(analysisReader, analysisFile.length()));
       }
       submission.setSubmissionStatus(Submission.SUBMISSION_STATUS_FINISHED);
       submission.setSubmissionStatusDate(new Date());
-      session.update(submission);
-      session.flush();
+      instanceSession.update(submission);
+      instanceSession.flush();
       transaction.commit();
-      session.flush();
 
       if (ackReader != null)
       {
@@ -663,6 +721,11 @@ public class ProcessorCore
       }
 
     }
+  }
+  
+  private Clob createClob(FileReader fr, long length) {
+	  Clob clob = instanceSession.getLobHelper().createClob(fr, length);
+	  return clob;
   }
 
   private IssueAction determineIssueAction(MessageReceived messageReceived)
@@ -694,12 +757,12 @@ public class ProcessorCore
     session.save(receiveQueue);
   }
 
-  private void printLogDetails(StringBuilder message, MessageReceived messageReceived, PrintWriter out, boolean printDetails)
+  private void printLogDetails(String messageString, MessageReceived messageReceived, PrintWriter out, boolean printDetails)
   {
     try
     {
-      out.println("Message " + thread.getProgressCount());
-      out.println(message);
+      out.println("Message " + managingThread.getProgressCount());
+      out.println(messageString);
       List<IssueFound> issuesFound = messageReceived.getIssuesFound();
       boolean first = true;
       for (IssueFound issueFound : issuesFound)
@@ -746,7 +809,7 @@ public class ProcessorCore
         printBean(out, messageReceived, "  ", new HashSet<Object>());
       }
       out.format("Current processing speed: %.2f messages/second ",
-          ((float) thread.getProgressCount()) / ((System.currentTimeMillis() - thread.getProgressStart()) / 1000.0));
+          ((float) managingThread.getProgressCount()) / ((System.currentTimeMillis() - managingThread.getProgressStart()) / 1000.0));
 
       out.println();
       out.println();
@@ -829,5 +892,38 @@ public class ProcessorCore
     }
     return thisPrinted;
   }
+
+	private int countMessages(File inFile) {
+		int mshSegments = 0;
+		try {
+			BufferedReader in = new BufferedReader(new FileReader(inFile));
+			String line = "";
+			do {
+				if (line.startsWith("MSH|")) {
+					mshSegments++;
+				}
+			} while ((line = in.readLine()) != null);
+			in.close();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return mshSegments;
+	}
+
+	/**
+	 * @return the messageCount
+	 */
+	public int getMessageCount() {
+		return messageCount;
+	}
+
+	/**
+	 * @param messageCount the messageCount to set
+	 */
+	public void setMessageCount(int messageCount) {
+		this.messageCount = messageCount;
+	}
 
 }

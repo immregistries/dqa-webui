@@ -66,9 +66,9 @@ public class SubmissionProcessor extends ManagerThread
       Transaction tx = session.beginTransaction();
       profile.initPotentialIssueStatus(session);
       tx.commit();
-      Query query = session.createQuery("from Submission where submitterName = ? and submissionStatus = ? order by createdDate ASC");
-      query.setParameter(0, submitterName);
-      query.setParameter(1, Submission.SUBMISSION_STATUS_SUBMITTED);
+      Query query = session.createQuery("from Submission where submitterName = :param1 and submissionStatus = :param2 order by createdDate ASC");
+      query.setParameter("param1", submitterName);
+      query.setParameter("param2", Submission.SUBMISSION_STATUS_SUBMITTED);
       List<Submission> submissionList = query.list();
       procLog("Found " + submissionList.size() + " submissions to process");
       internalLog.append("Found " + submissionList.size() + " submissions to process");
@@ -92,8 +92,8 @@ public class SubmissionProcessor extends ManagerThread
   private void findProfile(String profileCode, Session session)
   {
     procLog("Looking for submitter profile");
-    Query query = session.createQuery("from SubmitterProfile where profileCode = ?");
-    query.setParameter(0, profileCode);
+    Query query = session.createQuery("from SubmitterProfile where profileCode = :param1");
+    query.setParameter("param1", profileCode);
     List<SubmitterProfile> submitterProfiles = query.list();
     if (submitterProfiles.size() == 0)
     {
@@ -151,7 +151,7 @@ public class SubmissionProcessor extends ManagerThread
       {
         Clob requestContent = submission.getRequestContent();
         BufferedReader reader = new BufferedReader(requestContent.getCharacterStream());
-        processorCore.processIn(session, submission.getRequestName(), reader);
+        processorCore.processCharacterStream(session, submission.getRequestName(), reader);
       }
     } catch (SQLException sqle)
     {
@@ -282,7 +282,7 @@ public class SubmissionProcessor extends ManagerThread
       ackOut.close();
       Transaction transaction = session.beginTransaction();
       FileReader ackReader = new FileReader(ackFile);
-      submission.setResponseContent(Hibernate.createClob(ackReader, ackFile.length(), session));
+      submission.setResponseContent(session.getLobHelper().createClob(ackReader, ackFile.length()));
       submission.setSubmissionStatus(Submission.SUBMISSION_STATUS_ERROR);
       submission.setSubmissionStatusDate(new Date());
       session.update(submission);
